@@ -107,7 +107,7 @@ const matIntake = new THREE.MeshStandardMaterial({
 // HELPER: create a fuselage segment (cylinder along Z axis)
 // ============================================================
 function createFuselageSegment(radiusTop, radiusBottom, length, zCenter, scaleY = 0.7) {
-  const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, length, 24, 1, true);
+  const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, length, 24, 1, false);
   const mesh = new THREE.Mesh(geo, matBody);
   mesh.position.z = zCenter;
   mesh.scale.y = scaleY;
@@ -210,7 +210,7 @@ export function createF16(scene) {
   bodyGroup.add(splitter);
 
   // --- ENGINE NOZZLE ---
-  const nozzleGeo = new THREE.CylinderGeometry(0.22, 0.26, 0.6, 24, 1, true);
+  const nozzleGeo = new THREE.CylinderGeometry(0.22, 0.26, 0.6, 24, 1, false);
   const nozzle = new THREE.Mesh(nozzleGeo, matNozzle);
   nozzle.position.z = 3.5;
   nozzle.scale.y = 0.65;
@@ -349,39 +349,56 @@ export function createF16(scene) {
   stick.name = 'controlStick';
   cockpitGroup.add(stick);
 
-  // --- WINGS ---
+  // --- WINGS (reliable BufferGeometry trapezoids) ---
   const wingsGroup = new THREE.Group();
   wingsGroup.name = 'wingsGroup';
   root.add(wingsGroup);
 
-  function createWingShape() {
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.lineTo(2.8, -0.15);
-    shape.lineTo(1.8, -0.05);
-    shape.lineTo(0.3, 0.12);
-    shape.closePath();
-    return shape;
+  /**
+   * Build a flat trapezoid wing as BufferGeometry.
+   * Wing lies in XZ plane with small Y thickness.
+   */
+  function buildWingGeo(rootChord, tipChord, halfSpan, thickness, sweepZ) {
+    const hy = thickness / 2;
+    // Root at X=0, tip at X=halfSpan
+    // Root: Z from +rootChord/2 (LE) to -rootChord/2 (TE)
+    // Tip:  Z from -sweepZ+tipChord/2 (LE) to -sweepZ-tipChord/2 (TE)
+    const rLE = rootChord / 2, rTE = -rootChord / 2;
+    const tLE = -sweepZ + tipChord / 2, tTE = -sweepZ - tipChord / 2;
+
+    const v = new Float32Array([
+      0,  hy, rLE,   halfSpan,  hy, tLE,   halfSpan,  hy, tTE,   0,  hy, rTE,  // top 0-3
+      0, -hy, rLE,   halfSpan, -hy, tLE,   halfSpan, -hy, tTE,   0, -hy, rTE,  // bottom 4-7
+    ]);
+    const idx = [
+      0,1,2, 0,2,3,   // top
+      4,6,5, 4,7,6,   // bottom
+      0,4,5, 0,5,1,   // LE
+      3,2,6, 3,6,7,   // TE
+      0,3,7, 0,7,4,   // root rib
+      1,5,6, 1,6,2,   // tip rib
+    ];
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(v, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    return geo;
   }
 
-  const wingShape = createWingShape();
-  const wingExtrudeSettings = { steps: 1, depth: 0.06, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 5 };
-
-  // Left wing
-  const leftWingGeo = new THREE.ExtrudeGeometry(wingShape, wingExtrudeSettings);
+  // Left wing: root chord 0.55, tip chord 0.12, span 2.4, sweep 0.5
+  const leftWingGeo = buildWingGeo(0.55, 0.12, 2.4, 0.04, 0.5);
   const leftWing = new THREE.Mesh(leftWingGeo, matBody);
-  leftWing.position.set(-0.15, -0.05, -0.6);
-  leftWing.rotation.y = -0.1;
+  leftWing.position.set(-0.08, -0.02, -0.3);
   leftWing.castShadow = true;
   leftWing.receiveShadow = true;
   leftWing.name = 'leftWing';
   wingsGroup.add(leftWing);
 
-  // Right wing (mirror)
-  const rightWingGeo = new THREE.ExtrudeGeometry(wingShape, wingExtrudeSettings);
+  // Right wing: mirror by scaling X by -1
+  const rightWingGeo = buildWingGeo(0.55, 0.12, 2.4, 0.04, 0.5);
   const rightWing = new THREE.Mesh(rightWingGeo, matBody);
-  rightWing.position.set(0.15, -0.05, -0.6);
-  rightWing.rotation.y = Math.PI + 0.1;
+  rightWing.position.set(0.08, -0.02, -0.3);
+  rightWing.scale.x = -1;
   rightWing.castShadow = true;
   rightWing.receiveShadow = true;
   rightWing.name = 'rightWing';
@@ -392,47 +409,33 @@ export function createF16(scene) {
   tailGroup.name = 'tailGroup';
   root.add(tailGroup);
 
-  // Vertical stabilizer
-  const vStabShape = new THREE.Shape();
-  vStabShape.moveTo(0, 0);
-  vStabShape.lineTo(1.2, 0);
-  vStabShape.lineTo(0.7, 0.85);
-  vStabShape.lineTo(0.15, 0.55);
-  vStabShape.closePath();
-
-  const vStabGeo = new THREE.ExtrudeGeometry(vStabShape, { steps: 1, depth: 0.04, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 3 });
+  // Vertical stabilizer (flat trapezoid fin using buildWingGeo rotated 90° to stand up)
+  const vStabGeo = buildWingGeo(0.55, 0.08, 0.75, 0.035, 0.15);
   const vStab = new THREE.Mesh(vStabGeo, matBody);
-  vStab.position.set(0, 0.15, 2.5);
-  vStab.rotation.x = 0;
+  vStab.position.set(0, 0.35, 2.5);
+  // Rotate: the wing geo lies in XZ, we need it in YZ (standing up)
+  // rotate 90° around Z then -90° around Y, or simpler: rotate X by PI/2
+  vStab.rotation.x = Math.PI / 2;
+  vStab.rotation.z = -Math.PI / 2;
   vStab.castShadow = true;
   vStab.name = 'verticalStabilizer';
   tailGroup.add(vStab);
 
-  // Horizontal stabilizers (left and right)
-  const hStabShape = new THREE.Shape();
-  hStabShape.moveTo(0, 0);
-  hStabShape.lineTo(1.5, -0.15);
-  hStabShape.lineTo(0.9, 0.05);
-  hStabShape.lineTo(0.1, 0.08);
-  hStabShape.closePath();
+  // Horizontal stabilizers (small trapezoid wings at tail)
+  const leftHStabGeo = buildWingGeo(0.30, 0.06, 0.9, 0.025, 0.2);
+  const leftHStab = new THREE.Mesh(leftHStabGeo, matBody);
+  leftHStab.position.set(-0.1, 0.12, 2.6);
+  leftHStab.castShadow = true;
+  leftHStab.name = 'leftStabilizer';
+  tailGroup.add(leftHStab);
 
-  const hStabSettings = { steps: 1, depth: 0.03, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 3 };
-
-  const leftStabGeo = new THREE.ExtrudeGeometry(hStabShape, hStabSettings);
-  const leftStab = new THREE.Mesh(leftStabGeo, matBody);
-  leftStab.position.set(-0.1, 0.1, 2.7);
-  leftStab.rotation.y = -0.08;
-  leftStab.castShadow = true;
-  leftStab.name = 'leftStabilizer';
-  tailGroup.add(leftStab);
-
-  const rightStabGeo = new THREE.ExtrudeGeometry(hStabShape, hStabSettings);
-  const rightStab = new THREE.Mesh(rightStabGeo, matBody);
-  rightStab.position.set(0.1, 0.1, 2.7);
-  rightStab.rotation.y = Math.PI + 0.08;
-  rightStab.castShadow = true;
-  rightStab.name = 'rightStabilizer';
-  tailGroup.add(rightStab);
+  const rightHStabGeo = buildWingGeo(0.30, 0.06, 0.9, 0.025, 0.2);
+  const rightHStab = new THREE.Mesh(rightHStabGeo, matBody);
+  rightHStab.position.set(0.1, 0.12, 2.6);
+  rightHStab.scale.x = -1;
+  rightHStab.castShadow = true;
+  rightHStab.name = 'rightStabilizer';
+  tailGroup.add(rightHStab);
 
   // --- WING PYLONS ---
   function createPylon(x, z) {
@@ -485,10 +488,10 @@ export function createF16(scene) {
 
   // Place bombs under wings
   const bombPositions = [
-    { x: -0.8, z: 0.2 },   // left inner
-    { x: -1.5, z: 0.5 },   // left outer
-    { x: 0.8, z: 0.2 },    // right inner
-    { x: 1.5, z: 0.5 },    // right outer
+    { x: -0.9, z: -0.45 },   // left inner (1/3 span)
+    { x: -1.7, z: -0.60 },   // left outer (2/3 span)
+    { x: 0.9, z: -0.45 },    // right inner (1/3 span)
+    { x: 1.7, z: -0.60 },    // right outer (2/3 span)
   ];
 
   const bombRefs = [];
@@ -562,10 +565,10 @@ export function createF16(scene) {
     return missileGroup;
   }
 
-  // Place missiles at wingtips
+  // Place missiles at wingtips (match new wing geometry: halfSpan=2.4, rootZ=-0.3, sweep=0.5)
   const missilePositions = [
-    { x: -2.3, z: 0.8, ry: 0 },
-    { x: 2.3, z: 0.8, ry: 0 },
+    { x: -2.35, z: -0.75, ry: 0 },
+    { x: 2.35, z: -0.75, ry: 0 },
   ];
 
   const missileRefs = [];
