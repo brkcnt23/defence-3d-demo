@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Savunma Sanayii 3D Demo</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Scanline Overlay -->
+  <div id="scanlines"></div>
+
+  <!-- Corner Brackets -->
+  <div class="corner-bracket corner-tl"></div>
+  <div class="corner-bracket corner-tr"></div>
+  <div class="corner-bracket corner-bl"></div>
+  <div class="corner-bracket corner-br"></div>
+
+  <!-- Hex Grid Background -->
+  <div id="hex-grid"></div>
+
+  <!-- ============================================================
+  HUD OVERLAY
+  ============================================================ -->
+
+  <!-- Top Bar -->
+  <div id="hud-top-bar">
+    <div id="hud-logo">
+      <span class="logo-diamond">◆</span>
+      <span class="logo-text">DEFENCE</span><span class="logo-accent">TECH</span>
+    </div>
+    <div id="hud-top-center">
+      <span class="top-label">SİSTEM</span>
+      <span class="top-value" id="system-version">v3.7.4</span>
+    </div>
+    <div id="hud-top-right">
+      <div id="secure-indicator">
+        <span class="lock-icon">🔒</span>
+        <span>GÜVENLİ BAĞLANTI</span>
+      </div>
+      <div id="hud-clock">
+        <span id="clock-time">--:--:--</span>
+        <span id="clock-date">--------</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div id="hud-bottom-bar">
+    <div id="hud-product">
+      <div class="hud-label">ÜRÜN</div>
+      <div class="hud-value">Askeri Fiber Optik Kablo Sistemi</div>
+      <div class="hud-subtitle">MIL-SPEC TACTICAL COMMUNICATION</div>
+    </div>
+    <div id="hud-specs">
+      <div class="spec-item">
+        <div class="spec-label">Tip</div>
+        <div class="spec-value">Çok Çekirdekli Taktik Fiber</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Koruma</div>
+        <div class="spec-value">Kevlar + Poliüretan Kılıf</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Konnektör</div>
+        <div class="spec-value">MIL-DTL-83526</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Standard</div>
+        <div class="spec-value">ITU-T G.652.D</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div id="hud-controls">
+    <button id="btn-demo" class="hud-btn active" title="Demo turunu oynat">
+      <span class="btn-icon">▶</span> Demo Turu
+    </button>
+    <button id="btn-explode" class="hud-btn" title="Parçaları ayır">
+      <span class="btn-icon">⊕</span> Patlat
+    </button>
+    <button id="btn-reset" class="hud-btn" title="Sıfırla">
+      <span class="btn-icon">↺</span> Sıfırla
+    </button>
+  </div>
+
+  <!-- ============================================================
+  LEFT PANEL — System Data
+  ============================================================ -->
+  <div id="panel-left" class="hud-panel">
+    <div class="panel-header">
+      <span class="panel-diamond">◆</span>
+      <span>SİSTEM VERİLERİ</span>
+      <span class="panel-line"></span>
+    </div>
+    <div class="panel-body">
+      <div class="data-row">
+        <span class="data-label">Sinyal Gücü</span>
+        <span class="data-value" id="data-signal">-10.2 dBm</span>
+        <div class="data-bar"><div class="data-bar-fill" style="width:78%"></div></div>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Veri Akışı</span>
+        <span class="data-value" id="data-throughput">9.4 Gbps</span>
+        <div class="data-bar"><div class="data-bar-fill" style="width:88%"></div></div>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Bant Genişliği</span>
+        <span class="data-value">100 GHz</span>
+        <div class="data-bar"><div class="data-bar-fill" style="width:92%"></div></div>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Gecikme</span>
+        <span class="data-value" id="data-latency">0.12 ms</span>
+        <div class="data-bar"><div class="data-bar-fill low" style="width:15%"></div></div>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Paket Bütünlüğü</span>
+        <span class="data-value integrity" id="data-integrity">99.97%</span>
+        <div class="data-bar"><div class="data-bar-fill green" style="width:97%"></div></div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <span class="panel-dot"></span> AKTİF
+    </div>
+  </div>
+
+  <!-- ============================================================
+  RIGHT PANEL — Diagnostics
+  ============================================================ -->
+  <div id="panel-right" class="hud-panel">
+    <div class="panel-header">
+      <span class="panel-diamond">◆</span>
+      <span>DİYAGNOSTİK</span>
+      <span class="panel-line"></span>
+    </div>
+    <div class="panel-body">
+      <!-- Waveform -->
+      <div class="data-row">
+        <span class="data-label">Sinyal Dalga Formu</span>
+        <canvas id="waveform-canvas" width="228" height="42"></canvas>
+      </div>
+
+      <!-- Fiber Cores -->
+      <div class="data-row">
+        <span class="data-label">Fiber Çekirdekler</span>
+        <div id="core-indicators">
+          <div class="core-ind"><span class="core-dot" style="--c:#3b82f6"></span><span class="core-label">Ç1</span><span class="core-status on">AKTİF</span></div>
+          <div class="core-ind"><span class="core-dot" style="--c:#f59e0b"></span><span class="core-label">Ç2</span><span class="core-status on">AKTİF</span></div>
+          <div class="core-ind"><span class="core-dot" style="--c:#10b981"></span><span class="core-label">Ç3</span><span class="core-status on">AKTİF</span></div>
+          <div class="core-ind"><span class="core-dot" style="--c:#ef4444"></span><span class="core-label">Ç4</span><span class="core-status on">AKTİF</span></div>
+          <div class="core-ind"><span class="core-dot" style="--c:#8b5cf6"></span><span class="core-label">Ç5</span><span class="core-status on">AKTİF</span></div>
+          <div class="core-ind"><span class="core-dot" style="--c:#ec4899"></span><span class="core-label">Ç6</span><span class="core-status on">AKTİF</span></div>
+        </div>
+      </div>
+
+      <!-- Temperature -->
+      <div class="data-row">
+        <span class="data-label">Sıcaklık</span>
+        <span class="data-value" id="data-temp">+34.7°C</span>
+        <div class="data-bar"><div class="data-bar-fill warm" style="width:35%"></div></div>
+      </div>
+
+      <!-- Connection Quality -->
+      <div class="data-row">
+        <span class="data-label">Bağlantı Kalitesi</span>
+        <div class="quality-score">
+          <span class="quality-value" id="data-quality">98.2</span>
+          <span class="quality-unit">/100</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <span class="panel-dot pulse"></span> CANLI
+    </div>
+  </div>
+
+  <!-- ============================================================
+  HOTSPOT INFO CARDS (initially hidden)
+  ============================================================ -->
+  <div id="hotspot-card" class="hotspot-card hidden">
+    <div class="hotspot-inner">
+      <div class="hotspot-header">
+        <span class="hotspot-diamond">◆</span>
+        <span id="hotspot-title">BİLEŞEN</span>
+      </div>
+      <div class="hotspot-body" id="hotspot-body">
+        Açıklama metni burada görünecek.
+      </div>
+      <div class="hotspot-specs" id="hotspot-specs">
+      </div>
+      <button class="hotspot-close" id="hotspot-close">✕ KAPAT</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  NOTIFICATION TOAST CONTAINER
+  ============================================================ -->
+  <div id="notification-container"></div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="loader-ring">
+      <div class="loader-ring-inner"></div>
+    </div>
+    <div class="loader-text">SİSTEM BAŞLATILIYOR...</div>
+    <div class="loader-sub">FIBER OPTIC NETWORK INITIALIZATION</div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

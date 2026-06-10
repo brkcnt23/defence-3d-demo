@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manuli Hydraulics — 3D Ürün Deneyimi</title>
+  <link rel="stylesheet" href="/src/manuli.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Yükleme Ekranı -->
+  <div id="loading">
+    <div class="loading-logo">MANULI<span>HYDRAULICS</span></div>
+    <div class="loading-bar"><div class="loading-fill"></div></div>
+    <div class="loading-text">Akışkan Gücü Simülasyonu Başlatılıyor...</div>
+  </div>
+
+  <!-- Üst Bar -->
+  <div id="topbar">
+    <div class="topbar-brand">
+      <span class="brand-mark">⟁</span>
+      MANULI<span class="brand-light">HYDRAULICS</span>
+    </div>
+    <div class="topbar-scenes">
+      <button class="scene-tab active" data-scene="0">Q.SAFE Serisi</button>
+      <button class="scene-tab" data-scene="1">Hidrolik Hortum</button>
+      <button class="scene-tab" data-scene="2">Entegre Çözüm</button>
+    </div>
+    <div class="topbar-badges" id="badge-container">
+      <!-- JS ile doldurulacak -->
+    </div>
+  </div>
+
+  <!-- Alt Bilgi Paneli -->
+  <div id="infopanel">
+    <div id="infopanel-title"></div>
+    <div id="infopanel-desc"></div>
+    <div id="infopanel-specs"></div>
+  </div>
+
+  <!-- Çevre Simülasyon Butonları -->
+  <div id="enviro-buttons">
+    <button class="enviro-btn" data-env="snow" title="-30°C Donma Testi">
+      <span class="enviro-icon">❄️</span>
+      <span class="enviro-label">-30°C</span>
+    </button>
+    <button class="enviro-btn" data-env="fire" title="+110°C Isı Testi">
+      <span class="enviro-icon">🔥</span>
+      <span class="enviro-label">+110°C</span>
+    </button>
+    <button class="enviro-btn" data-env="ocean" title="Tuzlu Su Korozyon Testi">
+      <span class="enviro-icon">🌊</span>
+      <span class="enviro-label">Korozyon</span>
+    </button>
+    <button class="enviro-btn reset" data-env="reset" title="Normal Koşullar">
+      <span class="enviro-icon">↺</span>
+    </button>
+  </div>
+
+  <!-- Alt Kontroller -->
+  <div id="controls-bar">
+    <button class="ctrl-btn" id="btn-explode">
+      <span class="ctrl-icon">💥</span> Kesit Görünüm
+    </button>
+    <button class="ctrl-btn" id="btn-autoplay">
+      <span class="ctrl-icon">▶</span> Demo Turu
+    </button>
+    <button class="ctrl-btn" id="btn-reset">
+      <span class="ctrl-icon">↺</span> Sıfırla
+    </button>
+    <span class="ctrl-hint">🖱️ Sürükle • Kaydır • Tıkla</span>
+  </div>
+
+  <script type="module" src="/src/manuli.js"></script>
+</body>
+</html>

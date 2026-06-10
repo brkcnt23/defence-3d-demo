@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>eBaskicim — 3D Baskı Konfigüratörü</title>
+  <script type="module" crossorigin src="/assets/ebaskici-B_rivXuj.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/index-BBHjVLaR.js">
+  <link rel="stylesheet" crossorigin href="/assets/ebaskici-BTJTS6CM.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Yükleme -->
+  <div id="loading">
+    <div class="load-logo">e<span>Baskicim</span></div>
+    <div class="load-bar"><div class="load-fill"></div></div>
+  </div>
+
+  <!-- Üst Bar -->
+  <div id="topbar">
+    <div class="topbar-logo">e<span>Baskicim</span></div>
+    <div class="topbar-title">3D Baskı Konfigüratörü</div>
+    <div class="topbar-price" id="price-display">₺0</div>
+  </div>
+
+  <!-- Ürün Tipi Seçici -->
+  <div id="product-selector">
+    <button class="prod-card active" data-product="framed">
+      <span class="prod-icon">🖼️</span>
+      <span class="prod-name">Çerçeveli Tablo</span>
+    </button>
+    <button class="prod-card" data-product="canvas">
+      <span class="prod-icon">🎨</span>
+      <span class="prod-name">Kanvas Baskı</span>
+    </button>
+    <button class="prod-card" data-product="varnished">
+      <span class="prod-icon">✨</span>
+      <span class="prod-name">Vernikli Eser</span>
+    </button>
+  </div>
+
+  <!-- Özelleştirme Paneli -->
+  <div id="customizer">
+    <!-- Zemin / Malzeme -->
+    <div class="custom-section">
+      <div class="section-title">📦 Zemin Malzemesi</div>
+      <div class="swatch-row" id="material-swatches">
+        <!-- JS ile doldurulacak -->
+      </div>
+    </div>
+
+    <!-- Çerçeve / Dış Tasarım -->
+    <div class="custom-section">
+      <div class="section-title">🖼️ Çerçeve Tasarımı</div>
+      <div class="swatch-row" id="frame-swatches">
+        <!-- JS ile doldurulacak -->
+      </div>
+    </div>
+
+    <!-- İçerik / Afiş Tasarımı -->
+    <div class="custom-section">
+      <div class="section-title">🎨 İçerik Tasarımı</div>
+      <div class="swatch-row" id="design-swatches">
+        <!-- JS ile doldurulacak -->
+      </div>
+    </div>
+
+    <!-- Vernik Toggle (sadece Vernikli Eser'de görünür) -->
+    <div class="custom-section" id="vernik-section" style="display:none">
+      <div class="section-title">✨ Spot UV Vernik</div>
+      <button id="btn-vernik" class="swatch size-btn active" style="width:100%">
+        Vernik: <span id="vernik-status">Açık ✨</span>
+      </button>
+    </div>
+
+    <!-- Renk Seçici -->
+    <div class="custom-section">
+      <div class="section-title">🌈 Vurgu Rengi</div>
+      <div class="swatch-row" id="color-swatches">
+        <!-- JS ile doldurulacak -->
+      </div>
+    </div>
+
+    <!-- Ebat -->
+    <div class="custom-section">
+      <div class="section-title">📏 Ebat</div>
+      <div class="size-row" id="size-swatches">
+        <!-- JS ile doldurulacak -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Alt Butonlar -->
+  <div id="action-bar">
+    <button class="action-btn secondary" id="btn-rotate">
+      🔄 Döndür: <span id="rotate-status">Açık</span>
+    </button>
+    <button class="action-btn secondary" id="btn-screenshot">
+      📸 Ekran Görüntüsü
+    </button>
+    <button class="action-btn primary" id="btn-order">
+      🛒 Teklif Al
+    </button>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="tooltip"></div>
+
+</body>
+</html>
