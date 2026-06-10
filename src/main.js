@@ -1147,29 +1147,48 @@ function stopDemoTour() {
 let isExploded = false;
 
 function toggleExplode() {
-  // A-7 Corsair: Patlat = uçağı gizle, patlamış parçaları göster
+  // A-7 Corsair: Patlat = HER MESH'I MERKEZDEN DIŞA DAĞIT
   if (activeModel === 'f16' && f16Group && f16Group.userData.modelLoaded) {
     isF16Exploded = !isF16Exploded;
-    const ud = f16Group.userData;
-    const ex = ud.explodedGroup;
-
-    if (!ex) { btnExplode.classList.remove('active'); return; }
+    const nodes = f16Group.userData.allNodes;
+    if (!nodes || !nodes.length) { btnExplode.classList.remove('active'); return; }
 
     if (isF16Exploded) {
-      // Hide aircraft, show exploded parts
-      f16Group.visible = false;
-      ex.visible = true;
-      ex.scale.set(0.01, 0.01, 0.01);
-      gsap.to(ex.scale, { x: 1, y: 1, z: 1, duration: 0.6, ease: 'back.out(1.7)' });
-      addNotification('PARÇA GÖRÜNÜMÜ: Motor • Füzeler • Aviyonik');
+      nodes.forEach((n, i) => {
+        const orig = n.origPos;
+        const dist = orig.length(); // how far from center originally
+        const dir = orig.clone().normalize();
+        // Push outward: multiply original distance by 2-3x plus random spread
+        const spread = 2.5 + Math.random() * 1.5;
+        const target = dir.multiplyScalar(dist * spread + 1.5);
+        gsap.to(n.ref.position, {
+          x: target.x, y: target.y, z: target.z,
+          duration: 0.7 + Math.random() * 0.4,
+          ease: 'power2.out',
+          delay: Math.random() * 0.2,
+        });
+        // Slight random rotation
+        gsap.to(n.ref.rotation, {
+          x: n.origRot.x + (Math.random() - 0.5) * 1.5,
+          y: n.origRot.y + (Math.random() - 0.5) * 1.5,
+          z: n.origRot.z + (Math.random() - 0.5) * 1.5,
+          duration: 0.7, ease: 'power2.out', delay: Math.random() * 0.15,
+        });
+      });
+      addNotification(`PARÇALANDI: ${nodes.length} parça dağıtıldı`);
     } else {
-      // Hide exploded, show aircraft
-      gsap.to(ex.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 0.4, ease: 'power2.in', onComplete: () => {
-        ex.visible = false;
-      }});
-      f16Group.visible = true;
-      f16Group.scale.set(1, 1, 1);
-      addNotification('UÇAK GÖRÜNÜMÜNE DÖNÜLDÜ');
+      // RESET: all nodes back to original positions
+      nodes.forEach((n, i) => {
+        gsap.to(n.ref.position, {
+          x: n.origPos.x, y: n.origPos.y, z: n.origPos.z,
+          duration: 0.55, ease: 'power2.in', delay: Math.random() * 0.1,
+        });
+        gsap.to(n.ref.rotation, {
+          x: n.origRot.x, y: n.origRot.y, z: n.origRot.z,
+          duration: 0.5, ease: 'power2.in', delay: Math.random() * 0.08,
+        });
+      });
+      addNotification('PARÇALAR BİRLEŞTİ');
     }
     btnExplode.classList.toggle('active', isF16Exploded);
     return;
@@ -1296,107 +1315,24 @@ function switchModel(target) {
           f16Group.rotation.y = Math.PI;
           scene.add(f16Group);
 
-          // Find & clone parts for exploded view
+          // Store ALL child nodes with their original positions for explode
           const ud = f16Group.userData;
           ud.modelLoaded = true;
           ud.flapsLeft = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP ARR_Left');
           ud.flapsRight = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP ARR_Right');
-          ud.flapsAvantLeft = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP AVANT_Left');
-          ud.flapsAvantRight = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP AVANT_Right');
           ud.tailRudder = f16Group.getObjectByName('TAIL rudder');
-
-          // Build EXPLODED VIEW group (hidden by default)
-          const explodedGroup = new THREE.Group();
-          explodedGroup.name = 'A7_Exploded';
-          explodedGroup.visible = false;
-          scene.add(explodedGroup);
-          ud.explodedGroup = explodedGroup;
-
-          // Helper: deep-clone a node and add to explodedGroup at offset
-          function clonePart(src, x, y, z, label) {
-            if (!src) return null;
-            const clone = src.clone(true);
-            clone.position.set(x, y, z);
-            clone.rotation.set(0, 0, 0);
-            clone.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
-            explodedGroup.add(clone);
-            if (label) clone.name = label;
-            return clone;
-          }
-
-          // Clone weapons from the GLB model
-          clonePart(ud.sidewinder, -2.5, -1.2, 0, 'Sidewinder_Exploded');
-          clonePart(ud.mk82, -1.3, -1.5, 0.5, 'MK82_Exploded');
-          clonePart(ud.mk82Double, 1.3, -1.5, 0.5, 'MK82Double_Exploded');
-          clonePart(ud.fuelTank, 0, -2.0, 0, 'FuelTank_Exploded');
-          // Clone cockpit interior (avionics)
-          const cockpitClone = clonePart(f16Group.getObjectByName('COCKPIT INSIDE'), 0, 0.2, 2.5, 'Avionics_Exploded');
-          if (cockpitClone) cockpitClone.scale.set(1.5, 1.5, 1.5);
-
-          // --- Programmatic turbofan engine ---
-          const engineGroup = new THREE.Group();
-          engineGroup.name = 'Engine_Exploded';
-          engineGroup.position.set(0, -0.3, -2.5);
-          const engMetal = new THREE.MeshStandardMaterial({ color: 0x555560, roughness: 0.3, metalness: 0.9 });
-          const engDark = new THREE.MeshStandardMaterial({ color: 0x333340, roughness: 0.35, metalness: 0.85 });
-          const engHot = new THREE.MeshStandardMaterial({ color: 0xff4400, roughness: 0.2, metalness: 0.1, emissive: 0xff4400, emissiveIntensity: 2 });
-          // Outer casing
-          const casingGeo = new THREE.CylinderGeometry(0.35, 0.38, 2.2, 28);
-          const casing = new THREE.Mesh(casingGeo, engMetal);
-          casing.rotation.x = Math.PI / 2;
-          engineGroup.add(casing);
-          // Inner rings
-          for (let i = 0; i < 4; i++) {
-            const ringGeo = new THREE.TorusGeometry(0.30 - i * 0.02, 0.018, 12, 28);
-            const ring = new THREE.Mesh(ringGeo, engDark);
-            ring.position.z = -0.65 + i * 0.45;
-            ring.rotation.x = Math.PI / 2;
-            engineGroup.add(ring);
-          }
-          // Fan blades
-          for (let i = 0; i < 10; i++) {
-            const a = (i / 10) * Math.PI * 2;
-            const bladeGeo = new THREE.BoxGeometry(0.04, 0.28, 0.07);
-            const blade = new THREE.Mesh(bladeGeo, engDark);
-            blade.position.set(Math.cos(a) * 0.28, Math.sin(a) * 0.28, -1.05);
-            blade.rotation.z = a;
-            engineGroup.add(blade);
-          }
-          // Afterburner nozzle
-          const abGeo = new THREE.CylinderGeometry(0.26, 0.30, 0.4, 28);
-          const ab = new THREE.Mesh(abGeo, engHot);
-          ab.position.z = 1.2;
-          ab.rotation.x = Math.PI / 2;
-          engineGroup.add(ab);
-          // Intake lip
-          const intakeGeo = new THREE.TorusGeometry(0.36, 0.04, 12, 28);
-          const intakeRing = new THREE.Mesh(intakeGeo, engMetal);
-          intakeRing.position.z = -1.1;
-          intakeRing.rotation.x = Math.PI / 2;
-          engineGroup.add(intakeRing);
-          explodedGroup.add(engineGroup);
-
-          // Labels for exploded parts
-          function addLabel(text, x, y, z) {
-            const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-            const ctx = c.getContext('2d');
-            ctx.fillStyle = 'rgba(0,8,20,0.85)'; ctx.fillRect(0, 0, 256, 64);
-            ctx.strokeStyle = '#0af'; ctx.lineWidth = 1; ctx.strokeRect(4, 4, 248, 56);
-            ctx.fillStyle = '#0af'; ctx.font = 'bold 16px Orbitron'; ctx.textAlign = 'center';
-            ctx.fillText(text, 128, 38);
-            const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-            const geo = new THREE.PlaneGeometry(1.2, 0.3);
-            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
-            const label = new THREE.Mesh(geo, mat);
-            label.position.set(x, y, z);
-            explodedGroup.add(label);
-          }
-          addLabel('F110-GE-129 TURBOFAN', 0, 0.6, -2.5);
-          addLabel('SIDEWINDER AIM-9X', -2.5, -0.4, 0);
-          addLabel('MK82 500lb BOMB', -1.3, -0.7, 0.5);
-          addLabel('MK82 500lb BOMB', 1.3, -0.7, 0.5);
-          addLabel('FUEL TANK 300 GAL', 0, -1.2, 0);
-          addLabel('AVIYONIK SISTEMLER', 0, 1.0, 2.5);
+          ud.allNodes = [];
+          f16Group.traverse((child) => {
+            if (child !== f16Group && child.isMesh) {
+              ud.allNodes.push({
+                ref: child,
+                origPos: child.position.clone(),
+                origRot: child.rotation.clone(),
+                origScale: child.scale.clone(),
+              });
+            }
+          });
+          console.log('   Patlatilabilir parca:', ud.allNodes.length, 'mesh');
 
           f16Group.visible = true;
           loadingEl.classList.add('hidden');

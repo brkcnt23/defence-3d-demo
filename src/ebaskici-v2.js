@@ -8,6 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import gsap from 'gsap';
 import { DecisionTreeEngine, MATERIAL_DB } from './decision-tree.js';
 import { ContentEditor, FONTS, LAYOUTS, SHAPES, buildShapedProduct } from './content-editor.js';
+import { SignLetters, LETTER_STYLES } from './sign-letters.js';
 
 // ============================================================
 // DOM REFS
@@ -275,37 +276,62 @@ function buildProduct(selections) {
   const thickness = mat ? mat.thickness / 1000 : 0.005;
   const shapeId = selections.shape || 'rectangle_landscape';
   const shape = SHAPES[shapeId] || SHAPES.rectangle_landscape;
+  const isSignage = selections.product_type === 'signage';
 
-  // --- Content texture (Canvas tabanlı) ---
-  const contentTex = editor.getTexture();
+  // --- Signage modu: Backboard + 3D harfler ---
+  if (isSignage && signLetters._ready) {
+    // Backboard (kompozit/dekota panel)
+    const boardGeo = new THREE.BoxGeometry(w, h, thickness);
+    const boardTex = mat?.texture ? loadTex(mat.texture) : null;
+    const boardMat = new THREE.MeshStandardMaterial({
+      color: mat?.color || '#f5f0e8',
+      roughness: mat?.roughness || 0.5,
+      metalness: mat?.metalness || 0.02,
+      map: boardTex,
+    });
+    const board = new THREE.Mesh(boardGeo, boardMat);
+    board.position.z = -thickness / 2 - 0.01;
+    board.castShadow = true;
+    board.receiveShadow = true;
+    productGroup.add(board);
 
-  // --- Spot UV efekti ---
-  if (selections.finishing?.includes('spot_uv')) {
-    // Clearcoat front material
-    const frontBoard = productGroup;
-    // handled via frontMat below
+    // 3D harf grubu — backboard'un önünde
+    signLetters.group.position.set(0, 0, thickness / 2 + 0.005);
+    signLetters.group.visible = true;
+
+    // Harf yüksekliğini panele oranla
+    const letterH = Math.min(h * 0.55, 0.3);
+    signLetters.setLetterHeight(letterH * 1000);
+
+    productGroup.add(signLetters.group);
+
+    // Çerçeve
+    if (shape.type === 'rect' || shape.type === 'rounded_rect') {
+      const frameGroup = buildFrameMesh(w, h, thickness, selectedFrameProfile || 'thin_modern');
+      productGroup.add(frameGroup);
+    }
+  } else {
+    // --- Diğer ürünler: Canvas texture ---
+    if (isSignage) {
+      // Signage ama font henüz yüklenmedi → fallback: canvas texture
+      signLetters.group.visible = false;
+    }
+
+    const contentTex = editor.getTexture();
+    const { group: shapedGroup } = buildShapedProduct(shapeId, w, h, thickness, mat, contentTex);
+    productGroup.add(shapedGroup);
+
+    const hasFrame = (shape.type === 'rect' || shape.type === 'rounded_rect') &&
+                     (selections.product_type === 'print_product' ||
+                      (selections.product_type === 'plaque' && selections.mounting === 'wall_mounted'));
+
+    if (hasFrame) {
+      const frameGroup = buildFrameMesh(w, h, thickness, selectedFrameProfile || 'thin_modern');
+      productGroup.add(frameGroup);
+    }
   }
 
-  // --- Şekilli ürün oluştur ---
-  const { group: shapedGroup } = buildShapedProduct(shapeId, w, h, thickness, mat, contentTex);
-  productGroup.add(shapedGroup);
-
-  // --- Ellipse için scale düzeltmesi ---
-  if (shape.type === 'ellipse') {
-    // buildShapedProduct zaten scale uyguluyor
-  }
-
-  // --- Çerçeve (sadece dikdörtgen şekillerde) ---
-  const hasFrame = (shape.type === 'rect' || shape.type === 'rounded_rect') &&
-                   (selections.product_type === 'print_product' ||
-                    (selections.product_type === 'plaque' && selections.mounting === 'wall_mounted'));
-
-  if (hasFrame) {
-    const frameGroup = buildFrameMesh(w, h, thickness, selectedFrameProfile || 'thin_modern');
-    productGroup.add(frameGroup);
-  }
-
-  // --- Ayak/stand (freestanding / desktop için) ---
+  // --- Ayak/stand ---
   if (selections.mounting === 'freestanding' || selections.mounting === 'desktop') {
     const standMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.3, metalness: 0.7 });
     const standGeo = new THREE.CylinderGeometry(0.008, 0.012, 0.2, 12);
@@ -336,6 +362,18 @@ function buildProduct(selections) {
 // ============================================================
 const engine = new DecisionTreeEngine();
 const editor = new ContentEditor();
+const signLetters = new SignLetters(scene);
+
+// Font init (async)
+(async () => {
+  try {
+    await signLetters.init();
+    signLetters.addToScene(new THREE.Vector3(0, 0, -0.3));
+    console.log('🔤 3D Sign Letters: font yüklendi');
+  } catch (e) {
+    console.warn('Font yüklenemedi, harf sistemi devre dışı:', e.message);
+  }
+})();
 
 // Frame seçim state'i (karar ağacı dışında)
 let selectedFrameProfile = 'thin_modern';
@@ -496,6 +534,7 @@ function renderContentEditing(state) {
 
   const w = state.selections.width || 300;
   const h = state.selections.height || 200;
+  const isSignage = state.selections.product_type === 'signage';
   editor.setProductSize(w, h);
 
   const font = FONTS.find(f => f.id === editor.state.font);
@@ -524,6 +563,20 @@ function renderContentEditing(state) {
         `).join('')}
       </div>
     </div>
+
+    ${isSignage ? `
+    <!-- Harf Stili (sadece tabela) -->
+    <div class="content-section">
+      <div class="content-label">✨ Harf Stili</div>
+      <div class="letter-style-row" id="letter-style-selector">
+        ${Object.entries(LETTER_STYLES).map(([id, s]) => `
+          <button class="letter-style-btn ${id === signLetters.style ? 'active' : ''}" data-style="${id}"
+                  style="background:${s.color};${s.color === '#fafafa' || s.color === '#c8ccd0' ? 'border:2px solid #555;' : ''}${s.color === '#1a1a1a' ? 'border:2px solid #888;' : ''}"
+                  title="${s.name}"></button>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
 
     <!-- Şekil Seçici -->
     <div class="content-section">
@@ -585,6 +638,16 @@ function renderContentEditing(state) {
       const vals = [editor.state.line1, editor.state.line2, editor.state.line3];
       vals[i] = el.value;
       editor.setText(vals[0], vals[1], vals[2]);
+
+      // Tabela modunda: 3D harfleri güncelle
+      const isSignage = state.selections.product_type === 'signage';
+      if (isSignage && signLetters._ready) {
+        // Ana başlık = store sign text
+        if (i === 0) {
+          signLetters.updateText(vals[0]);
+        }
+      }
+
       buildProduct({ ...state.selections, shape: editor.state.shape, frame_profile: selectedFrameProfile, finishing: selectedFinishing });
     });
   });
@@ -599,6 +662,15 @@ function renderContentEditing(state) {
     buildProduct({ ...state.selections, shape: editor.state.shape, frame_profile: selectedFrameProfile, finishing: selectedFinishing });
     // Re-render to update font preview in text inputs
     renderContentEditing(engine.getState());
+  });
+
+  // Letter style buttons (signage only)
+  document.getElementById('letter-style-selector')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.letter-style-btn');
+    if (!btn) return;
+    signLetters.setStyle(btn.dataset.style);
+    document.querySelectorAll('.letter-style-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
   });
 
   // Shape buttons
@@ -900,6 +972,7 @@ document.getElementById('btn-start-over').addEventListener('click', () => {
   engine.reset();
   editor.setText('', '', '');
   editor.removeImage();
+  signLetters.clear();
   selectedFinishing = [];
   selectedFrameProfile = 'thin_modern';
   contentDone = false;

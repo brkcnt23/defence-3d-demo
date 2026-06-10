@@ -314,6 +314,18 @@ body {
 .font-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
 .font-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(88,166,255,0.08); }
 
+/* Letter style selector (signage) */
+.letter-style-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.letter-style-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: all .2s ease; position: relative;
+}
+.letter-style-btn:hover { transform: scale(1.15); }
+.letter-style-btn.active { border-color: var(--accent); box-shadow: 0 0 14px rgba(240,136,62,0.4); }
+
 /* Shape selector */
 .shape-btn {
   display: flex; align-items: center; gap: 6px;
