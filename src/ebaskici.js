@@ -239,8 +239,8 @@ scene.add(stool(-2.0,1.2)); scene.add(stool(2.0,1.2));
 
 // Arka duvar spotları — tabloyu aydınlatır
 const spotL = new THREE.SpotLight(0xffffff, 8, 8, Math.PI/10, 0.4, 0.3);
-spotL.position.set(0, 3.0, -1.5);
-spotL.target.position.set(0, 0.6, -3.45);
+spotL.position.set(0, 2.8, -1.5);
+spotL.target.position.set(0, 0.6, -3.2);
 scene.add(spotL); scene.add(spotL.target);
 
 const spotR = new THREE.SpotLight(0xffffff, 8, 8, Math.PI/10, 0.4, 0.3);
@@ -358,7 +358,7 @@ function buildProduct() {
     buildVarnished(productMesh, mat, frame, s);
   }
 
-  productMesh.position.set(0, 0.6, -3.45); // Arka duvara yaslı
+  productMesh.position.set(0, 0.6, -3.2); // Arka duvar nişinde
   productMesh.castShadow = true;
   productMesh.receiveShadow = true;
   scene.add(productMesh);
@@ -390,19 +390,18 @@ function buildFramed(group, mat, frame, s) {
   const w = 0.9 * s;  const h = 1.2 * s;  const d = 0.03 * s;
   const artTex = loadArtTex();
 
-  // Arka panel — ince düzlem (BoxGeometry değil, kenar yüzleri olmasın)
-  const boardGeo = new THREE.PlaneGeometry(w, h);
+  // Arka panel (mat.name)
+  const boardGeo = new THREE.BoxGeometry(w, h, d);
   const boardMat = new THREE.MeshStandardMaterial({ map: getMatTexture(mat), roughness: mat.roughness, metalness: mat.metalness });
   const board = new THREE.Mesh(boardGeo, boardMat);
-  board.position.z = -0.002;
   board.castShadow = true; board.receiveShadow = true;
   group.add(board);
 
-  // Sanat eseri ön yüz — board ile aynı boyutta, tam kapatır
-  const decalGeo = new THREE.PlaneGeometry(w, h);
+  // Sanat eseri ön yüz
+  const decalGeo = new THREE.PlaneGeometry(w - 0.05, h - 0.05);
   const decalMat = new THREE.MeshStandardMaterial({ map: artTex, roughness: 0.5, metalness: 0 });
   const decal = new THREE.Mesh(decalGeo, decalMat);
-  decal.position.z = 0.002;
+  decal.position.z = d / 2 + 0.001;
   group.add(decal);
 
   // Çerçeve
@@ -462,22 +461,21 @@ function buildVarnished(group, mat, frame, s) {
   const w = 0.9 * s;  const h = 1.2 * s;  const d = 0.03 * s;
   const artTex = loadArtTex();
 
-  // Arka panel — ince düzlem (BoxGeometry değil)
-  const boardGeo = new THREE.PlaneGeometry(w, h);
+  // Arka panel
+  const boardGeo = new THREE.BoxGeometry(w, h, d);
   const boardMat = new THREE.MeshStandardMaterial({ map: getMatTexture(mat), roughness: mat.roughness, metalness: mat.metalness });
   const board = new THREE.Mesh(boardGeo, boardMat);
-  board.position.z = -0.002;
   board.castShadow = true; board.receiveShadow = true;
   group.add(board);
 
-  // Vernikli ön yüz — tam boyut, board'u kapatır
-  const decalGeo = new THREE.PlaneGeometry(w, h);
+  // Vernikli ön yüz — MeshPhysicalMaterial clearcoat
+  const decalGeo = new THREE.PlaneGeometry(w - 0.05, h - 0.05);
   const decalMat = state.vernik ? new THREE.MeshPhysicalMaterial({
     map: artTex, roughness: 0.35, metalness: 0,
     clearcoat: 0.8, clearcoatRoughness: 0.1,
   }) : new THREE.MeshStandardMaterial({ map: artTex, roughness: 0.55, metalness: 0 });
   const decal = new THREE.Mesh(decalGeo, decalMat);
-  decal.position.z = 0.002;
+  decal.position.z = d / 2 + 0.001;
   group.add(decal);
   decal.userData = { isDecal: true, artTex };
 
@@ -689,7 +687,7 @@ document.getElementById('btn-order').addEventListener('click', () => {
 // CAMERA
 // ============================================================
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0.6, -3.45);
+controls.target.set(0, 0.6, -3.2);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.minDistance = 2.5;
@@ -724,8 +722,8 @@ function animate() {
 rebuildAllSwatches();
 buildProduct();
 resetCamera();
-controls.target.set(0, 0.6, -3.45);
-camera.position.set(0, 1.6, 3.0);
+controls.target.set(0, 0.6, -3.2);
+camera.position.set(0, 1.6, -0.5);
 controls.update();
 
 setTimeout(() => loadingEl.classList.add('hidden'), 800);
