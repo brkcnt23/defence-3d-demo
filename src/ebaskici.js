@@ -329,7 +329,7 @@ const state = {
   vernik: true,            // Vernik (clearcoat) açık/kapalı
 };
 let productMesh = null;
-let autoRotate = true; // Ürün kendi etrafında dönsün mü?
+let autoRotate = false; // Ürün kendi etrafında dönsün mü? (default: duruyor)
 
 function getMatTexture(mat) {
   return loadTex('/textures/' + mat.tex);
@@ -414,21 +414,12 @@ function buildFramed(group, mat, frame, s) {
     addFrame(group, w, h, d, frame.thickness * s, frame.color);
   }
 
-  // Şövale (elegant easel)
-  const eColor = frame.thickness > 0 ? frame.color : '#3a2f25';
+  // Şövale ayağı (sadece altta görünür destek)
   const easelMat = new THREE.MeshStandardMaterial({ map: loadTex('/textures/dark_wood.jpg'), roughness: 0.4, metalness: 0.05 });
-  const stickGeo = new THREE.CylinderGeometry(0.02 * s, 0.02 * s, 0.9 * s, 8);
-  const stick = new THREE.Mesh(stickGeo, easelMat);
-  stick.position.set(0, -h / 2 - 0.45 * s, 0.05 * s);
-  stick.castShadow = true; group.add(stick);
-  const crossGeo = new THREE.CylinderGeometry(0.015 * s, 0.015 * s, 0.5 * s, 8);
-  const crossBar = new THREE.Mesh(crossGeo, easelMat);
-  crossBar.position.set(0, -h / 2 - 0.2 * s, 0.05 * s);
-  crossBar.rotation.x = Math.PI / 2; group.add(crossBar);
-  // Küçük ayak
-  const footGeo = new THREE.BoxGeometry(0.15 * s, 0.02 * s, 0.08 * s);
+  const footGeo = new THREE.BoxGeometry(0.18 * s, 0.02 * s, 0.10 * s);
   const foot = new THREE.Mesh(footGeo, easelMat);
-  foot.position.set(0, -h / 2 - 0.9 * s, 0); group.add(foot);
+  foot.position.set(0, -h / 2 - 0.05 * s, 0.02 * s);
+  foot.castShadow = true; group.add(foot);
 }
 
 // Kanvas Baskı (galeri sarma, çerçevesiz, bez dokulu)
@@ -498,19 +489,12 @@ function buildVarnished(group, mat, frame, s) {
     addFrame(group, w, h, d, frame.thickness * s, frame.color);
   }
 
-  // Şövale
-  const easelMat = new THREE.MeshStandardMaterial({ map: loadTex('/textures/dark_wood.jpg'), roughness: 0.4, metalness: 0.05 });
-  const stickGeo = new THREE.CylinderGeometry(0.02 * s, 0.02 * s, 0.9 * s, 8);
-  const stick = new THREE.Mesh(stickGeo, easelMat);
-  stick.position.set(0, -h / 2 - 0.45 * s, 0.05 * s);
-  stick.castShadow = true; group.add(stick);
-  const crossGeo = new THREE.CylinderGeometry(0.015 * s, 0.015 * s, 0.5 * s, 8);
-  const crossBar = new THREE.Mesh(crossGeo, easelMat);
-  crossBar.position.set(0, -h / 2 - 0.2 * s, 0.05 * s);
-  crossBar.rotation.x = Math.PI / 2; group.add(crossBar);
-  const footGeo = new THREE.BoxGeometry(0.15 * s, 0.02 * s, 0.08 * s);
-  const foot = new THREE.Mesh(footGeo, easelMat);
-  foot.position.set(0, -h / 2 - 0.9 * s, 0); group.add(foot);
+  // Şövale ayağı (sadece altta görünür destek)
+  const easelMat2 = new THREE.MeshStandardMaterial({ map: loadTex('/textures/dark_wood.jpg'), roughness: 0.4, metalness: 0.05 });
+  const footGeo2 = new THREE.BoxGeometry(0.18 * s, 0.02 * s, 0.10 * s);
+  const foot2 = new THREE.Mesh(footGeo2, easelMat2);
+  foot2.position.set(0, -h / 2 - 0.05 * s, 0.02 * s);
+  foot2.castShadow = true; group.add(foot2);
 }
 
 function addFrame(group, w, h, d, ft, color) {
@@ -683,7 +667,7 @@ btnRotate.addEventListener('click', () => {
   rotateStatus.textContent = autoRotate ? 'Açık' : 'Kapalı';
   btnRotate.classList.toggle('active', autoRotate);
 });
-btnRotate.classList.add('active'); // Başlangıçta açık
+// Rotate başlangıçta kapalı (kullanıcı açana kadar dönmez)
 
 // Screenshot
 document.getElementById('btn-screenshot').addEventListener('click', () => {
