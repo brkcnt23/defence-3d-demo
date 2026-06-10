@@ -1338,13 +1338,23 @@ function switchModel(target) {
 
           f16Group.visible = true;
           loadingEl.classList.add('hidden');
+          btnModelCable.classList.remove('active');
+          btnModelF16.classList.add('active');
+          updateHUDForModel('f16');
+          const lpf = document.querySelector('#panel-left .panel-footer');
+          const rpf = document.querySelector('#panel-right .panel-footer');
+          if (lpf) lpf.innerHTML = '<span class="panel-dot"></span> HAZIR';
+          if (rpf) rpf.innerHTML = '<span class="panel-dot pulse"></span> SİLAHLI';
           console.log('✈ A-7 Corsair II yüklendi (22MB optimized)');
           addNotification('A-7 CORSAIR II HAZIR');
         },
         (p) => { if (Math.round(p.loaded/p.total*100) % 25 === 0) console.log(`   %${Math.round(p.loaded/p.total*100)}`); },
         (e) => { console.error('GLB hatası:', e); loadingEl.classList.add('hidden'); }
       );
+      // Model async yükleniyor — UI şimdilik yükleme durumunda kalsın
+      return; // geri kalan UI güncellemeleri load callback içinde
     }
+    // Model zaten yüklenmiş, direkt göster
     f16Group.visible = true;
     btnModelCable.classList.remove('active');
     btnModelF16.classList.add('active');
