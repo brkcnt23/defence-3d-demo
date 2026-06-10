@@ -395,18 +395,19 @@ function buildFramed(group, mat, frame, s) {
   const w = 0.9 * s;  const h = 1.2 * s;  const d = 0.03 * s;
   const artTex = loadArtTex();
 
-  // Arka panel (mat.name)
-  const boardGeo = new THREE.BoxGeometry(w, h, d);
+  // Arka panel — ince düzlem (BoxGeometry değil, kenar yüzleri olmasın)
+  const boardGeo = new THREE.PlaneGeometry(w, h);
   const boardMat = new THREE.MeshStandardMaterial({ map: getMatTexture(mat), roughness: mat.roughness, metalness: mat.metalness });
   const board = new THREE.Mesh(boardGeo, boardMat);
+  board.position.z = -0.002;
   board.castShadow = true; board.receiveShadow = true;
   group.add(board);
 
-  // Sanat eseri ön yüz
-  const decalGeo = new THREE.PlaneGeometry(w - 0.05, h - 0.05);
+  // Sanat eseri ön yüz — board ile aynı boyutta, tam kapatır
+  const decalGeo = new THREE.PlaneGeometry(w, h);
   const decalMat = new THREE.MeshStandardMaterial({ map: artTex, roughness: 0.5, metalness: 0 });
   const decal = new THREE.Mesh(decalGeo, decalMat);
-  decal.position.z = d / 2 + 0.001;
+  decal.position.z = 0.002;
   group.add(decal);
 
   // Çerçeve
@@ -466,21 +467,22 @@ function buildVarnished(group, mat, frame, s) {
   const w = 0.9 * s;  const h = 1.2 * s;  const d = 0.03 * s;
   const artTex = loadArtTex();
 
-  // Arka panel
-  const boardGeo = new THREE.BoxGeometry(w, h, d);
+  // Arka panel — ince düzlem (BoxGeometry değil)
+  const boardGeo = new THREE.PlaneGeometry(w, h);
   const boardMat = new THREE.MeshStandardMaterial({ map: getMatTexture(mat), roughness: mat.roughness, metalness: mat.metalness });
   const board = new THREE.Mesh(boardGeo, boardMat);
+  board.position.z = -0.002;
   board.castShadow = true; board.receiveShadow = true;
   group.add(board);
 
-  // Vernikli ön yüz — MeshPhysicalMaterial clearcoat
-  const decalGeo = new THREE.PlaneGeometry(w - 0.05, h - 0.05);
+  // Vernikli ön yüz — tam boyut, board'u kapatır
+  const decalGeo = new THREE.PlaneGeometry(w, h);
   const decalMat = state.vernik ? new THREE.MeshPhysicalMaterial({
     map: artTex, roughness: 0.35, metalness: 0,
     clearcoat: 0.8, clearcoatRoughness: 0.1,
   }) : new THREE.MeshStandardMaterial({ map: artTex, roughness: 0.55, metalness: 0 });
   const decal = new THREE.Mesh(decalGeo, decalMat);
-  decal.position.z = d / 2 + 0.001;
+  decal.position.z = 0.002;
   group.add(decal);
   decal.userData = { isDecal: true, artTex };
 
