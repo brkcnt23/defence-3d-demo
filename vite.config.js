@@ -13,6 +13,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         manuli: resolve(__dirname, 'manuli.html'),
         ebaskici: resolve(__dirname, 'ebaskici.html'),
+        ebaskiciv2: resolve(__dirname, 'ebaskici-v2.html'),
       },
     },
   },

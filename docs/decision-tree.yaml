@@ -1,0 +1,634 @@
+# ============================================================
+# eBaskicim — Ürün Karar Ağacı (Decision Tree)
+# Her düğüm bir karar noktası. Her karar sonraki seçenekleri filtreler.
+# ============================================================
+
+meta:
+  version: "1.0"
+  language: tr
+  total_leaf_products: 42  # nihai ürün kombinasyonu sayısı
+
+# ============================================================
+# SEVİYE 0: Ürün Ailesi
+# ============================================================
+product_families:
+  - id: signage
+    label: "Yönlendirme & Tabela"
+    icon: "🪧"
+    description: "İç/dış mekan yönlendirme, kurumsal tabela, kapı tabelası"
+    children_question: "Ne tür bir tabela istiyorsunuz?"
+
+  - id: plaque
+    label: "Plaket & Ödül"
+    icon: "🏆"
+    description: "Akrilik plaket, kristal ödül, metal plaka"
+    children_question: "Ne tür bir plaket düşünüyorsunuz?"
+
+  - id: nameplate
+    label: "İsimlik & Rozet"
+    icon: "📛"
+    description: "Masaüstü isimlik, yaka rozeti, kapı isimliği"
+    children_question: "Ne tür isimlik istiyorsunuz?"
+
+  - id: print_product
+    label: "Baskı Ürünleri"
+    icon: "🎨"
+    description: "Kanvas, çerçeveli tablo, vernikli eser, afiş"
+    children_question: "Ne tür baskı ürünü istiyorsunuz?"
+
+  - id: display
+    label: "Teşhir & Stand"
+    icon: "📐"
+    description: "Roll-up, x-stand, masaüstü stand, katalog tutucu"
+    children_question: "Ne tür teşhir ürünü istiyorsunuz?"
+
+  - id: module
+    label: "Modüler Sistem"
+    icon: "🧩"
+    description: "Değiştirilebilir panolu tabela, modular sergi duvarı"
+    children_question: "Ne tür modüler sistem istiyorsunuz?"
+
+# ============================================================
+# SEVİYE 1: Kullanım Yeri (her aile için)
+# ============================================================
+location:
+  id: location
+  question: "Ürün nerede kullanılacak?"
+  type: single_choice
+  options:
+    - id: indoor
+      label: "İç Mekan"
+      icon: "🏠"
+      affects:
+        materials_filter: "outdoor == false OR universal == true"
+        thickness_min: 2
+        finish_required: false
+    - id: outdoor
+      label: "Dış Mekan"
+      icon: "🌤️"
+      affects:
+        materials_filter: "outdoor == true"
+        thickness_min: 3
+        uv_resistant_ink: true
+        weatherproof: true
+    - id: semi_outdoor
+      label: "Yarı Açık (Saçak altı, otopark girişi)"
+      icon: "🏗️"
+      affects:
+        materials_filter: "outdoor == true OR semi_outdoor == true"
+        thickness_min: 3
+
+# ============================================================
+# SEVİYE 2: Montaj Tipi
+# ============================================================
+mounting:
+  id: mounting
+  question: "Nasıl monte edilecek?"
+  type: single_choice
+  options:
+    - id: wall_mounted
+      label: "Duvar Montaj"
+      icon: "🧱"
+      affects:
+        back_side: "hidden"         # arkası görünmez
+        hardware: ["dübel", "vida", "aynalı askı"]
+        price_addon: 0
+        3d_context: "wall"          # sahnede duvarda göster
+    - id: hanging
+      label: "Askılı (Tavandan/Kornişten)"
+      icon: "🪝"
+      affects:
+        hardware: ["çelik halat", "krom boru", "zincir"]
+        frame_required: true        # askı için çerçeve şart
+        price_addon: 50
+        3d_context: "ceiling"
+    - id: freestanding
+      label: "Ayaklı (Yerde)"
+      icon: "🦶"
+      affects:
+        back_side: "visible"        # arkası da görünür → çift taraflı opsiyonu
+        hardware: ["metal ayak", "ahşap sehpa", "ağırlıklı taban"]
+        base_required: true
+        price_addon: 150
+        3d_context: "floor"
+    - id: desktop
+      label: "Masaüstü"
+      icon: "🪑"
+      affects:
+        hardware: ["akrilik tutucu", "metal ayak", "ahşap blok"]
+        size_limited: true
+        max_dimensions: { w: 400, h: 300 }
+        price_addon: 0
+        3d_context: "desk"
+    - id: pole_mounted
+      label: "Direk Montaj (Yol kenarı)"
+      icon: "🚏"
+      affects:
+        hardware: ["galvaniz direk", "flanj", "beton temel"]
+        outdoor: true
+        wind_load_calc: true
+        price_addon: 500
+        3d_context: "pole"
+
+# ============================================================
+# SEVİYE 3: Malzeme Seçimi (filtrelenmiş)
+# ============================================================
+materials:
+  - id: kompozit_3mm
+    name: "3mm Alüminyum Kompozit"
+    family: composite
+    thickness: 3
+    outdoor: true
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: false
+    summa_cut: false
+    printable_sides: ["front", "back"]
+    edge_finish: "raw"             # ham kenar, istenirse bant
+    weight_kgm2: 5.5
+    price_m2: 22
+    lead_time_days: 2
+    max_size: { w: 1500, h: 4000 }
+    texture_front: "kompozit_white.jpg"
+    texture_edge: "kompozit_edge.jpg"
+    finish_options: ["mat", "parlak"]
+    description: "Dış mekan için ideal. Hafif, dayanıklı, UV baskıya uygun."
+    not_for: ["desktop", "nameplate"]
+
+  - id: kompozit_4mm
+    name: "4mm Alüminyum Kompozit"
+    family: composite
+    thickness: 4
+    outdoor: true
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: false
+    summa_cut: false
+    printable_sides: ["front", "back"]
+    weight_kgm2: 7.2
+    price_m2: 28
+    lead_time_days: 2
+    max_size: { w: 1500, h: 4000 }
+    finish_options: ["mat", "parlak", "fırçalanmış"]
+    description: "Büyük ebatlı dış mekan tabelaları için. 3mm'ye göre daha rijit."
+    not_for: ["desktop", "nameplate"]
+
+  - id: dekota_3mm
+    name: "3mm Dekota (PVC Köpük)"
+    family: pvc_foam
+    thickness: 3
+    outdoor: false
+    semi_outdoor: false
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: false
+    summa_cut: true
+    printable_sides: ["front"]
+    weight_kgm2: 1.35
+    price_m2: 12
+    lead_time_days: 1
+    max_size: { w: 1200, h: 2400 }
+    finish_options: ["mat"]
+    description: "Ekonomik iç mekan. Summa ile seri kesim. Hafif."
+    not_for: ["outdoor", "semi_outdoor"]
+
+  - id: dekota_5mm
+    name: "5mm Dekota (PVC Köpük)"
+    family: pvc_foam
+    thickness: 5
+    outdoor: false
+    semi_outdoor: false
+    uv_printable: true
+    cnc_cut: true
+    summa_cut: true
+    printable_sides: ["front"]
+    weight_kgm2: 2.25
+    price_m2: 16
+    lead_time_days: 1
+    max_size: { w: 1200, h: 2400 }
+    finish_options: ["mat"]
+    description: "İç mekan yönlendirme ve bilgi panoları için standart."
+    not_for: ["outdoor", "semi_outdoor"]
+
+  - id: dekota_10mm
+    name: "10mm Dekota (PVC Köpük)"
+    family: pvc_foam
+    thickness: 10
+    outdoor: true              # kalın dekota kısa süreli dış mekana uygun
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    summa_cut: false            # 10mm Summa kesmez
+    printable_sides: ["front"]
+    weight_kgm2: 4.5
+    price_m2: 24
+    lead_time_days: 1
+    max_size: { w: 1200, h: 2400 }
+    finish_options: ["mat"]
+    description: "Kalın iç mekan veya korunaklı dış mekan. 3 boyutlu kesim."
+    not_for: ["nameplate"]
+
+  - id: pleksi_3mm
+    name: "3mm Pleksi (Akrilik Şeffaf)"
+    family: acrylic
+    thickness: 3
+    outdoor: true
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: true
+    summa_cut: false
+    printable_sides: ["front", "back"]   # ters baskı efekti
+    transparent: true
+    weight_kgm2: 3.6
+    price_m2: 35
+    lead_time_days: 2
+    max_size: { w: 1200, h: 2400 }
+    finish_options: ["mat", "parlak", "buzlu"]
+    description: "Şeffaf akrilik. Ters baskı + beyaz altlık ile premium görünüm."
+    special_effects: ["backprint_white", "edge_glow_led"]
+
+  - id: pleksi_5mm
+    name: "5mm Pleksi (Akrilik Şeffaf)"
+    family: acrylic
+    thickness: 5
+    outdoor: true
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: true
+    summa_cut: false
+    transparent: true
+    weight_kgm2: 6.0
+    price_m2: 45
+    lead_time_days: 2
+    max_size: { w: 1200, h: 2400 }
+    finish_options: ["mat", "parlak", "buzlu"]
+    suitable_for: ["plaque", "nameplate", "signage"]
+    description: "Premium plaket ve tabela. Kalınlık hissi verir, lazer kazıma yapılabilir."
+
+  - id: pleksi_renkli_3mm
+    name: "3mm Renkli Pleksi (Opak)"
+    family: acrylic_opaque
+    thickness: 3
+    outdoor: true
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: true
+    summa_cut: false
+    transparent: false
+    colors: ["beyaz", "siyah", "kırmızı", "mavi", "yeşil", "sarı", "gold", "silver"]
+    weight_kgm2: 3.6
+    price_m2: 40
+    lead_time_days: 2
+    max_size: { w: 1200, h: 2400 }
+    finish_options: ["mat", "parlak"]
+    description: "Renkli opak akrilik. Lazer kesim harfler, logo uygulamaları."
+
+  - id: aluminyum_2mm
+    name: "2mm Alüminyum Sac"
+    family: metal
+    thickness: 2
+    outdoor: true
+    semi_outdoor: true
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: true
+    summa_cut: false
+    printable_sides: ["front"]
+    weight_kgm2: 5.4
+    price_m2: 55
+    lead_time_days: 3
+    max_size: { w: 1000, h: 2000 }
+    finish_options: ["mat", "fırçalanmış", "eloksal"]
+    description: "Endüstriyel tabela. Yüksek dayanıklılık. Yangın yönetmeliğine uygun."
+    not_for: ["desktop"]
+
+  - id: ahsap_mdf_6mm
+    name: "6mm MDF Lazer Kesim"
+    family: wood
+    thickness: 6
+    outdoor: false
+    semi_outdoor: false
+    uv_printable: true
+    cnc_cut: true
+    laser_cut: true
+    summa_cut: false
+    printable_sides: ["front"]
+    weight_kgm2: 4.2
+    price_m2: 20
+    lead_time_days: 1
+    max_size: { w: 600, h: 900 }
+    finish_options: ["doğal", "vernikli", "boyalı"]
+    description: "Ahşap lazer kesim. Retro, rustik tasarımlar. Düğün, organizasyon."
+    not_for: ["outdoor", "semi_outdoor"]
+
+  - id: forex_3mm
+    name: "3mm Forex (PVC Köpük — Ekonomik)"
+    family: pvc_foam_eco
+    thickness: 3
+    outdoor: false
+    semi_outdoor: false
+    uv_printable: true
+    cnc_cut: false
+    summa_cut: true
+    printable_sides: ["front"]
+    weight_kgm2: 0.9
+    price_m2: 8
+    lead_time_days: 1
+    max_size: { w: 700, h: 1000 }
+    finish_options: ["mat"]
+    description: "En ekonomik seçenek. Geçici iç mekan uygulamaları."
+    not_for: ["outdoor", "semi_outdoor", "hanging", "pole_mounted"]
+
+  - id: kanvas_bez
+    name: "Kanvas Bez (Galeri Sarma)"
+    family: fabric
+    thickness: 18                   # şasi kalınlığı
+    outdoor: false
+    uv_printable: true
+    cnc_cut: false
+    stretcher_frame: true
+    weight_kgm2: 0.4
+    price_m2: 25
+    lead_time_days: 1
+    max_size: { w: 1000, h: 1500 }
+    finish_options: ["mat", "saten"]
+    description: "Sanat baskısı. Ahşap şasiye gerili. Galeri kalitesi."
+    not_for: ["outdoor", "semi_outdoor", "nameplate"]
+
+  - id: folyo_vinil
+    name: "Vinil Folyo (Düz Zemin Uygulama)"
+    family: vinyl
+    thickness: 0.1
+    outdoor: true
+    uv_printable: true
+    application: "adhesive"          # yapıştırmalı
+    weight_kgm2: 0.15
+    price_m2: 10
+    lead_time_days: 1
+    max_size: { w: 1300, h: 5000 }
+    finish_options: ["mat", "parlak"]
+    description: "Cam, metal, kompozit üzerine folyo uygulama. Araç giydirme, cam filmi."
+    requires_base_material: true     # alt malzeme zorunlu
+
+  - id: krom_kapama
+    name: "Krom Kapama (Metal Görünüm)"
+    family: coating
+    thickness: 0.2
+    outdoor: true
+    uv_printable: false              # kapama sonrası UV
+    application: "coating"
+    weight_kgm2: 0.1
+    price_m2: 60
+    lead_time_days: 4
+    max_size: { w: 600, h: 900 }
+    finish_options: ["altın", "gümüş", "krom", "nikel"]
+    description: "Pleksi üzerine vakum krom kaplama. Premium ödül ve plaket."
+    requires_base: "pleksi"
+
+# ============================================================
+# SEVİYE 4: Ebat
+# ============================================================
+sizing:
+  id: sizing
+  question: "Hangi ebatta olsun?"
+  type: choice_or_custom
+  options:
+    - id: preset
+      label: "Standart Ebatlar"
+      type: single_choice
+      values:
+        - { w: 300, h: 200, label: "A4 Yatay (30×20 cm)", price_multiplier: 1.0 }
+        - { w: 200, h: 300, label: "A4 Dikey (20×30 cm)", price_multiplier: 1.0 }
+        - { w: 420, h: 297, label: "A3 (42×30 cm)", price_multiplier: 1.8 }
+        - { w: 500, h: 350, label: "50×35 cm", price_multiplier: 2.5 }
+        - { w: 600, h: 400, label: "60×40 cm", price_multiplier: 3.2 }
+        - { w: 700, h: 500, label: "70×50 cm", price_multiplier: 4.5 }
+        - { w: 1000, h: 700, label: "100×70 cm", price_multiplier: 7.0 }
+        - { w: 1200, h: 800, label: "120×80 cm", price_multiplier: 9.5 }
+        - { w: 1500, h: 1000, label: "150×100 cm", price_multiplier: 15.0 }
+    - id: custom
+      label: "Özel Ebat"
+      type: numeric_input
+      constraints:
+        min: { w: 50, h: 50 }
+        max: "{material.max_size}"
+        step: 10
+      price_multiplier: "area / 0.06"   # A4 alanına göre
+
+# ============================================================
+# SEVİYE 5: Baskı İçeriği
+# ============================================================
+content:
+  id: content
+  question: "Ürünün üzerinde ne olacak?"
+  type: multi_input
+  sections:
+    - id: text_content
+      label: "Yazı/Metin"
+      type: text_input
+      fields:
+        - id: line_1
+          label: "Ana Başlık"
+          max_chars: 40
+        - id: line_2
+          label: "Alt Başlık"
+          max_chars: 60
+        - id: line_3
+          label: "Detay Metin"
+          max_chars: 120
+      font_options:
+        default: "Montserrat"
+        available: ["Montserrat", "Playfair Display", "Raleway", "Fira Sans", "Roboto", "Poppins", "Bebas Neue"]
+
+    - id: visual_content
+      label: "Görsel/Logo"
+      type: file_upload
+      accept: [".png", ".jpg", ".jpeg", ".svg", ".ai", ".eps", ".pdf"]
+      max_file_size_mb: 25
+      auto_trace: true               # SVG ise DXF'e çevirebilir
+      preview_on_model: true
+
+    - id: layout_template
+      label: "Yerleşim Şablonu"
+      type: single_choice
+      options:
+        - id: center
+          label: "Ortalanmış"
+        - id: left_aligned
+          label: "Sola Dayalı"
+        - id: right_aligned
+          label: "Sağa Dayalı"
+        - id: top_bottom
+          label: "Başlık Üstte — Detay Altta"
+        - id: logo_left_text_right
+          label: "Logo Solda — Metin Sağda"
+        - id: full_bleed
+          label: "Tam Kenar Baskı (bleed)"
+
+# ============================================================
+# SEVİYE 6: Özel İşlemler & Son Kat
+# ============================================================
+finishing:
+  id: finishing
+  question: "Özel işlem veya son kat ister misiniz?"
+  type: multi_select
+  options:
+    - id: spot_uv
+      label: "Spot UV Vernik"
+      icon: "✨"
+      description: "Belirli bölgelere parlak vernik. Logo veya yazıya vurgu."
+      price_addon_percent: 15
+      available_for: ["uv_printable == true"]
+      3d_effect: "clearcoat"           # MeshPhysicalMaterial clearcoat
+      production: "uv_varnish_pass"
+
+    - id: full_gloss
+      label: "Tam Parlak Vernik"
+      icon: "💎"
+      description: "Tüm yüzeye parlak koruyucu vernik."
+      price_addon_percent: 8
+      available_for: ["uv_printable == true"]
+      3d_effect: "roughness_low"
+
+    - id: matte_lamination
+      label: "Mat Laminasyon"
+      icon: "📋"
+      description: "Parmak izi tutmaz mat yüzey. Profesyonel görünüm."
+      price_addon_percent: 10
+      available_for: ["uv_printable == true AND family != 'metal'"]
+
+    - id: foil_stamping
+      label: "Yaldız/Folyo Baskı"
+      icon: "🌟"
+      description: "Altın/gümüş sıcak folyo. İsim veya logo."
+      price_addon_percent: 25
+      available_for: ["family == 'acrylic' OR family == 'wood'"]
+      production: "foil_press"
+      3d_effect: "metallic_overlay"
+
+    - id: laser_engraving
+      label: "Lazer Kazıma"
+      icon: "🔪"
+      description: "Yüzeye lazer ile kazıma. Kalıcı ve prestijli."
+      price_addon_percent: 20
+      available_for: ["laser_cut == true OR family == 'acrylic'"]
+      production: "laser_engrave"
+
+    - id: edge_painting
+      label: "Kenar Boyama"
+      icon: "🖌️"
+      description: "Kesim kenarlarının boyanması. Temiz bitiş."
+      price_addon_percent: 5
+      available_for: ["cnc_cut == true AND family == 'pvc_foam'"]
+
+    - id: led_backlight
+      label: "LED Arkadan Aydınlatma"
+      icon: "💡"
+      description: "Pleksiye arkadan LED. Gece görünürlüğü."
+      price_addon: 200
+      available_for: ["family == 'acrylic' AND transparent == true"]
+      production: "led_assembly"
+
+    - id: braille
+      label: "Braille (Görme Engelli)"
+      icon: "👆"
+      description: "Erişilebilirlik için Braille kabartma."
+      price_addon_percent: 30
+      available_for: ["thickness >= 3"]
+      production: "braille_insert"
+
+    - id: magnetic_back
+      label: "Mıknatıs Arka Yüz"
+      icon: "🧲"
+      description: "Manyetik yüzeye tutunur. Kolay sök/tak."
+      price_addon: 30
+      available_for: ["product_family == 'nameplate' OR thickness <= 5"]
+
+# ============================================================
+# FİYAT FORMÜLÜ
+# ============================================================
+pricing:
+  formula: |
+    base       = material.price_m2 × (width × height / 1_000_000)
+    size_adj   = base × sizing.price_multiplier
+    mount_adj  = size_adj + mounting.price_addon
+    finish_adj = mount_adj × (1 + sum(finishing.price_addon_percent) / 100)
+    qty_disc   = finish_adj × quantity × quantity_discount(quantity)
+    tax        = qty_disc × 0.20
+    total      = qty_disc + tax
+
+  quantity_discount:
+    - { min: 1, max: 4, discount: 0 }
+    - { min: 5, max: 9, discount: 0.05 }
+    - { min: 10, max: 24, discount: 0.10 }
+    - { min: 25, max: 49, discount: 0.15 }
+    - { min: 50, max: 99, discount: 0.20 }
+    - { min: 100, max: null, discount: 0.25 }
+
+  lead_time_formula: |
+    base     = material.lead_time_days
+    finish   = base + (finishing_count > 0 ? 1 : 0)
+    qty      = finish + ceil(quantity / 20)
+    mount    = qty + (mounting.type == 'pole_mounted' ? 3 : 0)
+    total    = mount
+
+# ============================================================
+# KARAR AĞACI KURALLARI (Constraint Engine)
+# ============================================================
+constraints:
+  # Malzeme ← Kullanım Yeri
+  - if: "location == outdoor"
+    then: "filter materials WHERE outdoor == true"
+    message: "Dış mekan için uygun malzemeler listeleniyor..."
+
+  - if: "location == indoor AND product_family == nameplate"
+    then: "filter materials WHERE thickness <= 5"
+    message: "İsimlik için ince malzemeler..."
+
+  # Montaj ← Ürün Tipi
+  - if: "product_family == nameplate"
+    then: "allowed mountings: [desktop, wall_mounted]"
+
+  - if: "product_family == plaque"
+    then: "allowed mountings: [wall_mounted, desktop]"
+
+  - if: "product_family == display"
+    then: "allowed mountings: [freestanding, desktop]"
+
+  # Malzeme ← Montaj
+  - if: "mounting == hanging AND weight_kgm2 * area > 5"
+    then: "WARNING: Ağırlık 5 kg üzerinde. Askı sistemi güçlendirilmeli."
+
+  - if: "mounting == pole_mounted"
+    then: "filter thickness >= 4"
+    message: "Direk montaj için minimum 4mm kalınlık gerekli."
+
+  # Ebat ← Malzeme
+  - if: "custom_size.w > material.max_size.w OR custom_size.h > material.max_size.h"
+    then: "REJECT: Seçilen malzeme bu ebatta üretilemez. Alternatif öner: daha büyük max_size'lı malzeme."
+
+  # Özel İşlem ← Malzeme
+  - if: "finishing contains spot_uv AND material.uv_printable == false"
+    then: "REJECT: Bu malzemeye UV vernik uygulanamaz."
+
+  # AI Önerileri (soft constraint — warning, not reject)
+  ai_suggestions:
+    - if: "content.font_size < 8 AND viewing_distance > 2000"
+      then: "WARNING: 2 metreden okunamayabilir. Minimum 12 mm yazı önerilir."
+
+    - if: "location == outdoor AND finishing NOT contains uv_resistant"
+      then: "WARNING: Dış mekanda UV koruma önerilir. Solma riski."
+
+    - if: "product_family == signage AND content.text_lines >= 4"
+      then: "INFO: Çok metinli tabelalar okunurluğu düşürebilir. Sadeleştirme önerilir."
+
+    - if: "material.family == 'pvc_foam' AND location == outdoor AND material.thickness < 10"
+      then: "WARNING: İnce PVC köpük dış mekanda deforme olabilir. Kompozit veya 10mm dekota önerilir."
+
+    - if: "mounting == wall_mounted AND material.weight_kgm2 > 8"
+      then: "WARNING: Ağır malzeme. Dübel + vida yeterli olmayabilir. Kimyasal dübel öner."

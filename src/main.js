@@ -12,6 +12,8 @@ import gsap from 'gsap';
 import studio from '@theatre/studio';
 import { getProject, types } from '@theatre/core';
 import { createF16, disposeF16, f16Explode, f16DemoCameras, updateF16 } from './f16.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 // ============================================================
 // DOM REFS
@@ -1145,16 +1147,48 @@ function stopDemoTour() {
 let isExploded = false;
 
 function toggleExplode() {
-  // F-16 explode mode
-  if (activeModel === 'f16' && f16Group) {
+  // A-7 Corsair GLB explode mode
+  if (activeModel === 'f16' && f16Group && f16Group.userData.modelLoaded) {
     isF16Exploded = !isF16Exploded;
-    f16Explode(f16Group, isF16Exploded);
-    btnExplode.classList.toggle('active', isF16Exploded);
+    const ud = f16Group.userData;
+
     if (isF16Exploded) {
-      addNotification('PARÇA GÖRÜNÜMÜ: AÇIK — Kanopi + Motor + Füzeler');
+      // Canopy glass nodes (traverse for GLASS)
+      f16Group.traverse(c => {
+        if (c.name && c.name.toUpperCase().includes('GLASS'))
+          gsap.to(c.position, { y: c.position.y + 0.5, duration: 0.7, ease: 'power2.out' });
+      });
+      // Cockpit (ejection seat effect)
+      if (ud.cockpitInside)
+        gsap.to(ud.cockpitInside.position, { y: ud.cockpitInside.position.y + 0.8, duration: 0.65, ease: 'power3.out' });
+      // Weapons spread
+      if (ud.sidewinder)
+        gsap.to(ud.sidewinder.position, { x: -2.0, y: ud.sidewinderOrig.y + 0.3, duration: 0.65, ease: 'power2.out' });
+      if (ud.mk82)
+        gsap.to(ud.mk82.position, { x: -1.3, y: ud.mk82Orig.y - 0.2, duration: 0.6, ease: 'power2.out', delay: 0.08 });
+      if (ud.mk82Double)
+        gsap.to(ud.mk82Double.position, { x: 1.3, y: ud.mk82DoubleOrig.y - 0.2, duration: 0.6, ease: 'power2.out', delay: 0.12 });
+      if (ud.fuelTank)
+        gsap.to(ud.fuelTank.position, { y: ud.fuelTankOrig.y - 0.5, duration: 0.55, ease: 'power2.out', delay: 0.15 });
+      addNotification('PARÇA GÖRÜNÜMÜ: AÇIK — Kanopi + Silahlar');
     } else {
+      f16Group.traverse(c => {
+        if (c.name && c.name.toUpperCase().includes('GLASS'))
+          gsap.to(c.position, { y: c.position.y - 0.5, duration: 0.55, ease: 'power2.in' });
+      });
+      if (ud.cockpitInside)
+        gsap.to(ud.cockpitInside.position, { y: ud.cockpitOrigPos.y, duration: 0.55, ease: 'power2.in' });
+      if (ud.sidewinder)
+        gsap.to(ud.sidewinder.position, { x: ud.sidewinderOrig.x, y: ud.sidewinderOrig.y, duration: 0.55, ease: 'power2.in' });
+      if (ud.mk82)
+        gsap.to(ud.mk82.position, { x: ud.mk82Orig.x, y: ud.mk82Orig.y, duration: 0.5, ease: 'power2.in' });
+      if (ud.mk82Double)
+        gsap.to(ud.mk82Double.position, { x: ud.mk82DoubleOrig.x, y: ud.mk82DoubleOrig.y, duration: 0.5, ease: 'power2.in' });
+      if (ud.fuelTank)
+        gsap.to(ud.fuelTank.position, { x: ud.fuelTankOrig.x, y: ud.fuelTankOrig.y, duration: 0.45, ease: 'power2.in' });
       addNotification('PARÇA GÖRÜNÜMÜ: KAPALI');
     }
+    btnExplode.classList.toggle('active', isF16Exploded);
     return;
   }
 
@@ -1228,13 +1262,13 @@ function updateHUDForModel(model) {
     panelLeftHeader.innerHTML = '<span class="panel-diamond">◆</span><span>SİSTEM VERİLERİ</span><span class="panel-line"></span>';
     panelRightHeader.innerHTML = '<span class="panel-diamond">◆</span><span>DİYAGNOSTİK</span><span class="panel-line"></span>';
   } else {
-    hudProductValue.textContent = 'F-16C Fighting Falcon';
-    hudProductSubtitle.textContent = 'MULTIROLE FIGHTER • BLOCK 50+';
+    hudProductValue.textContent = 'A-7E Corsair II';
+    hudProductSubtitle.textContent = 'LTV ATTACK AIRCRAFT • CARRIER-BASED';
     hudSpecsContainer.innerHTML = `
-      <div class="spec-item"><div class="spec-label">Motor</div><div class="spec-value">F110-GE-129 Turbofan</div></div>
-      <div class="spec-item"><div class="spec-label">Silah</div><div class="spec-value">9 Hardpoint • 7,700 kg</div></div>
-      <div class="spec-item"><div class="spec-label">Radar</div><div class="spec-value">AN/APG-68(V)9</div></div>
-      <div class="spec-item"><div class="spec-label">Hız</div><div class="spec-value">Mach 2.0+</div></div>`;
+      <div class="spec-item"><div class="spec-label">Motor</div><div class="spec-value">TF41-A-2 Turbofan</div></div>
+      <div class="spec-item"><div class="spec-label">Silah</div><div class="spec-value">6 Hardpoint • 6,800 kg</div></div>
+      <div class="spec-item"><div class="spec-label">Mürettebat</div><div class="spec-value">1 Pilot</div></div>
+      <div class="spec-item"><div class="spec-label">Hız</div><div class="spec-value">1,123 km/h</div></div>`;
     panelLeftHeader.innerHTML = '<span class="panel-diamond">◆</span><span>UÇUŞ VERİLERİ</span><span class="panel-line"></span>';
     panelRightHeader.innerHTML = '<span class="panel-diamond">◆</span><span>SİLAH SİSTEMLERİ</span><span class="panel-line"></span>';
   }
@@ -1262,20 +1296,64 @@ function switchModel(target) {
   } else {
     cableGroup.visible = false;
     if (!f16Group) {
-      f16Group = createF16(scene);
-      console.log('✈ F-16 Fighting Falcon yüklendi');
-      console.log('   Hotspotlar:', f16Group.userData.hotspotData.length, 'nokta');
-      console.log('   Etiketler:', f16Group.userData.partLabels.length, 'adet');
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+      const gltfLoader = new GLTFLoader();
+      gltfLoader.setDRACOLoader(dracoLoader);
+
+      addNotification('A-7 CORSAIR II YÜKLENİYOR...');
+      loadingEl.classList.remove('hidden');
+
+      gltfLoader.load('/A7_Corsair_II_opt.glb',
+        (gltf) => {
+          f16Group = gltf.scene;
+          f16Group.name = 'A7_Corsair_II';
+          f16Group.scale.set(0.4, 0.4, 0.4);
+          f16Group.position.set(0, -0.3, 0);
+          f16Group.rotation.y = Math.PI;
+          scene.add(f16Group);
+
+          // Find animated nodes
+          const ud = f16Group.userData;
+          ud.modelLoaded = true;
+          ud.flapsLeft = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP ARR_Left');
+          ud.flapsRight = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP ARR_Right');
+          ud.flapsAvantLeft = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP AVANT_Left');
+          ud.flapsAvantRight = f16Group.getObjectByName('MAIN WING FUSELAGE FLAP AVANT_Right');
+          ud.canopy = f16Group.getObjectByName('CANOPY');
+          ud.cockpitInside = f16Group.getObjectByName('COCKPIT INSIDE');
+          ud.sidewinder = f16Group.getObjectByName('SIDEWINDER Missile');
+          ud.mk82 = f16Group.getObjectByName('MK82 Bomb');
+          ud.mk82Double = f16Group.getObjectByName('MK82 Bomb DOUBLE');
+          ud.fuelTank = f16Group.getObjectByName('FUEL TANK');
+          ud.tailRudder = f16Group.getObjectByName('TAIL rudder');
+
+          // Store original world positions
+          const getWorld = (obj) => { const v = new THREE.Vector3(); if (obj) obj.getWorldPosition(v); return v; };
+          ud.sidewinderOrig = getWorld(ud.sidewinder);
+          ud.mk82Orig = getWorld(ud.mk82);
+          ud.mk82DoubleOrig = getWorld(ud.mk82Double);
+          ud.fuelTankOrig = getWorld(ud.fuelTank);
+          ud.cockpitOrigPos = ud.cockpitInside ? ud.cockpitInside.position.clone() : new THREE.Vector3();
+
+          f16Group.visible = true;
+          loadingEl.classList.add('hidden');
+          console.log('✈ A-7 Corsair II yüklendi (22MB optimized)');
+          addNotification('A-7 CORSAIR II HAZIR');
+        },
+        (p) => { if (Math.round(p.loaded/p.total*100) % 25 === 0) console.log(`   %${Math.round(p.loaded/p.total*100)}`); },
+        (e) => { console.error('GLB hatası:', e); loadingEl.classList.add('hidden'); }
+      );
     }
     f16Group.visible = true;
     btnModelCable.classList.remove('active');
     btnModelF16.classList.add('active');
     updateHUDForModel('f16');
-    const leftPanelFooter = document.querySelector('#panel-left .panel-footer');
-    const rightPanelFooter = document.querySelector('#panel-right .panel-footer');
-    if (leftPanelFooter) leftPanelFooter.innerHTML = '<span class="panel-dot"></span> HAZIR';
-    if (rightPanelFooter) rightPanelFooter.innerHTML = '<span class="panel-dot pulse"></span> SİLAHLI';
-    addNotification('F-16 FIGHTING FALCON SEÇİLDİ');
+    const lpf = document.querySelector('#panel-left .panel-footer');
+    const rpf = document.querySelector('#panel-right .panel-footer');
+    if (lpf) lpf.innerHTML = '<span class="panel-dot"></span> HAZIR';
+    if (rpf) rpf.innerHTML = '<span class="panel-dot pulse"></span> SİLAHLI';
+    addNotification('A-7 CORSAIR II SEÇİLDİ');
   }
 }
 
@@ -1532,9 +1610,23 @@ function animate() {
   // --- Hologram panel animations ---
   const time = Date.now() * 0.001;
 
-  // --- F-16 update ---
+  // --- A-7 Corsair update (flap yoyo + rudder sway) ---
   if (f16Group && f16Group.visible) {
-    updateF16(f16Group, time, camera, isF16Exploded);
+    const ud = f16Group.userData;
+    if (ud.modelLoaded) {
+      if (!isF16Exploded) {
+        const flapAngle = Math.sin(time * 1.5) * 0.12;
+        if (ud.flapsLeft) { ud.flapsLeft.rotation.x = flapAngle; ud.flapsLeft.rotation.z = flapAngle * 0.4; }
+        if (ud.flapsRight) { ud.flapsRight.rotation.x = flapAngle; ud.flapsRight.rotation.z = -flapAngle * 0.4; }
+        if (ud.flapsAvantLeft) { ud.flapsAvantLeft.rotation.x = flapAngle * 0.6; }
+        if (ud.flapsAvantRight) { ud.flapsAvantRight.rotation.x = flapAngle * 0.6; }
+      }
+      if (ud.tailRudder && !isF16Exploded) {
+        ud.tailRudder.rotation.z = Math.sin(time * 0.7) * 0.06;
+      }
+    } else {
+      updateF16(f16Group, time, camera, isF16Exploded);
+    }
   }
 
   hologramPanels.forEach((group, i) => {

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>eBaskicim v2 — 3D Baskı Konfigüratörü</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/assets/ebaskiciv2-C43cyoQg.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/index-DTTnktzs.js">
+  <link rel="stylesheet" crossorigin href="/assets/ebaskiciv2-DsYIHrnj.css">
+</head>
+<body>
+
+  <!-- 3D CANVAS (arka plan) -->
+  <div id="three-bg"></div>
+
+  <!-- YÜKLEME -->
+  <div id="loading">
+    <div class="load-logo">e<span>Baskicim</span></div>
+    <div class="load-sub">Dijital Baskı İşletim Sistemi</div>
+    <div class="load-bar"><div class="load-fill"></div></div>
+  </div>
+
+  <!-- ÜST BAR -->
+  <header id="topbar">
+    <div class="tb-left">
+      <div class="tb-logo">e<span>Baskicim</span></div>
+      <div class="tb-phase" id="phase-indicator"></div>
+    </div>
+    <div class="tb-center">
+      <div class="tb-breadcrumb" id="breadcrumb"></div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-price" id="price-display">
+        <span class="price-label">Toplam</span>
+        <span class="price-value">₺0</span>
+        <span class="price-leadtime" id="leadtime-display"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ANA KONFİGÜRATÖR ALANI -->
+  <main id="configurator">
+    <!-- Sol: Soru + Seçenekler -->
+    <div id="panel-left">
+      <div id="question-area">
+        <div class="step-counter" id="step-counter"></div>
+        <h2 class="question-text" id="question-text"></h2>
+        <p class="question-desc" id="question-desc"></p>
+      </div>
+      <div id="options-area">
+        <!-- Dinamik doldurulacak -->
+      </div>
+      <div id="nav-area">
+        <button id="btn-back" class="nav-btn back" style="display:none">
+          ← Geri
+        </button>
+        <button id="btn-skip" class="nav-btn skip" style="display:none">
+          Şimdilik Geç →
+        </button>
+      </div>
+    </div>
+
+    <!-- Sağ: Önizleme + Özet -->
+    <div id="panel-right">
+      <div id="summary-card">
+        <div class="summary-title">Seçimleriniz</div>
+        <div id="summary-list"></div>
+      </div>
+      <div id="price-card">
+        <div class="price-breakdown-title">Fiyat Detayı</div>
+        <div id="price-breakdown"></div>
+      </div>
+      <div id="warning-area"></div>
+    </div>
+  </main>
+
+  <!-- TAMAMLANDI OVERLAY -->
+  <div id="complete-overlay" style="display:none">
+    <div class="complete-card">
+      <div class="complete-icon">✅</div>
+      <h2>Tasarımınız Hazır!</h2>
+      <p id="complete-summary"></p>
+      <div class="complete-actions">
+        <button class="btn-primary" id="btn-get-offer">📋 Teklif Al</button>
+        <button class="btn-secondary" id="btn-start-over">🔄 Baştan Başla</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
