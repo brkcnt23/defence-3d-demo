@@ -11,6 +11,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import gsap from 'gsap';
 import studio from '@theatre/studio';
 import { getProject, types } from '@theatre/core';
+import { createF16, disposeF16, f16Explode, f16DemoCameras, updateF16 } from './f16.js';
 
 // ============================================================
 // DOM REFS
@@ -36,6 +37,21 @@ const hotspotTitle = document.getElementById('hotspot-title');
 const hotspotBody = document.getElementById('hotspot-body');
 const hotspotSpecs = document.getElementById('hotspot-specs');
 const hotspotClose = document.getElementById('hotspot-close');
+const btnModelCable = document.getElementById('btn-model-cable');
+const btnModelF16 = document.getElementById('btn-model-f16');
+
+// Model state
+let activeModel = 'cable'; // 'cable' | 'f16'
+let f16Group = null;
+let cableGroup = null;
+let isF16Exploded = false;
+
+// HUD element refs for updating
+const hudProductValue = document.querySelector('#hud-product .hud-value');
+const hudProductSubtitle = document.querySelector('#hud-product .hud-subtitle');
+const hudSpecsContainer = document.getElementById('hud-specs');
+const panelLeftHeader = document.querySelector('#panel-left .panel-header');
+const panelRightHeader = document.querySelector('#panel-right .panel-header');
 
 // ============================================================
 // SCENE, CAMERA, RENDERER
@@ -154,6 +170,13 @@ const particles = new THREE.Points(particlesGeo, particlesMat);
 scene.add(particles);
 
 // ============================================================
+// CABLE GROUP — All cable parts go here for show/hide switching
+// ============================================================
+cableGroup = new THREE.Group();
+cableGroup.name = 'CableGroup';
+scene.add(cableGroup);
+
+// ============================================================
 // CABLE ASSEMBLY
 // ============================================================
 const cablePathPoints = [
@@ -183,7 +206,7 @@ const jacket = new THREE.Mesh(jacketGeo, jacketMat);
 jacket.castShadow = true;
 jacket.receiveShadow = true;
 jacket.name = 'Kablo Kılıfı';
-scene.add(jacket);
+cableGroup.add(jacket);
 
 // --- Inner Kevlar layer ---
 const innerGeo = new THREE.TubeGeometry(cableCurve, 200, 0.10, 16, false);
@@ -195,7 +218,7 @@ const innerMat = new THREE.MeshStandardMaterial({
 const innerLayer = new THREE.Mesh(innerGeo, innerMat);
 innerLayer.castShadow = true;
 innerLayer.name = 'Kevlar Katman';
-scene.add(innerLayer);
+cableGroup.add(innerLayer);
 
 // --- Fiber cores ---
 const fiberColors = [0x3b82f6, 0xf59e0b, 0x10b981, 0xef4444, 0x8b5cf6, 0xec4899];
@@ -224,7 +247,7 @@ fiberOffsetAngles.forEach((angle, i) => {
   fiber.name = `Fiber ${i + 1}`;
   fiber.castShadow = true;
   fiberStrands.push(fiber);
-  scene.add(fiber);
+  cableGroup.add(fiber);
 });
 
 // --- Connector Groups ---
@@ -329,8 +352,8 @@ const rightConnector = createConnector(endPoint, endTangent, false);
 leftConnector.name = 'Sol Konnektör';
 rightConnector.name = 'Sağ Konnektör';
 
-scene.add(leftConnector);
-scene.add(rightConnector);
+cableGroup.add(leftConnector);
+cableGroup.add(rightConnector);
 
 const connectorData = {
   left: { group: leftConnector, originalPos: startPoint.clone() },
@@ -650,7 +673,7 @@ function createHologramPanel(anchorPos, title, subtitle, specData, panelW, panel
     line: anchorLine,
   };
 
-  scene.add(group);
+  cableGroup.add(group);
   return group;
 }
 
@@ -746,7 +769,7 @@ hotspotData.forEach((hs, i) => {
   marker.position.copy(hs.position);
   marker.name = `hotspot-${i}`;
   marker.userData = { hotspotIndex: i };
-  scene.add(marker);
+  cableGroup.add(marker);
   hotspotMarkers.push(marker);
 });
 
@@ -829,7 +852,12 @@ function updateMouse(event) {
 
 function getHotspotIntersections() {
   raycaster.setFromCamera(mouse, camera);
-  return raycaster.intersectObjects(hotspotMarkers);
+  // Check both cable and F-16 hotspots
+  const allMarkers = [...hotspotMarkers];
+  if (f16Group && f16Group.userData.hotspotMarkers) {
+    allMarkers.push(...f16Group.userData.hotspotMarkers);
+  }
+  return raycaster.intersectObjects(allMarkers);
 }
 
 function onMouseMove(event) {
@@ -868,11 +896,25 @@ function onClick(event) {
   updateMouse(event);
   const intersects = getHotspotIntersections();
   if (intersects.length > 0) {
-    const idx = intersects[0].object.userData.hotspotIndex;
-    if (idx !== undefined && hotspotData[idx]) {
-      showHotspotCard(idx);
+    const obj = intersects[0].object;
+    const idx = obj.userData.hotspotIndex;
+    if (idx !== undefined) {
+      // Check if it's an F-16 hotspot
+      if (obj.userData.model === 'f16' && obj.userData.hotspotData) {
+        showHotspotCardFromData(obj.userData.hotspotData);
+      } else if (hotspotData[idx]) {
+        showHotspotCard(idx);
+      }
     }
   }
+}
+
+function showHotspotCardFromData(hs) {
+  hotspotTitle.textContent = hs.title;
+  hotspotBody.textContent = hs.body;
+  hotspotSpecs.innerHTML = hs.specs.map(s => `<span class="mini-spec">${s}</span>`).join('');
+  hotspotCard.classList.remove('hidden');
+  controls.autoRotate = false;
 }
 
 function showHotspotCard(idx) {
@@ -1045,6 +1087,43 @@ function createDemoTour() {
 }
 
 function playDemoTour() {
+  // F-16 demo tour
+  if (activeModel === 'f16') {
+    if (demoTimeline) { demoTimeline.kill(); demoTimeline = null; }
+    isDemoPlaying = true;
+    btnDemo.classList.add('active');
+    controls.autoRotate = false;
+    addNotification('F-16 DEMO TURU BAŞLATILDI');
+
+    const cameras = f16DemoCameras();
+    demoTimeline = gsap.timeline({
+      onComplete: () => {
+        isDemoPlaying = false;
+        btnDemo.classList.remove('active');
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.3;
+        addNotification('F-16 DEMO TURU TAMAMLANDI');
+      },
+    });
+
+    let timeOffset = 0;
+    cameras.forEach(cam => {
+      demoTimeline.to(camera.position, {
+        x: cam.pos.x, y: cam.pos.y, z: cam.pos.z,
+        duration: cam.duration,
+        ease: 'power2.inOut',
+      }, timeOffset);
+      demoTimeline.to(controls.target, {
+        x: cam.target.x, y: cam.target.y, z: cam.target.z,
+        duration: cam.duration,
+        ease: 'power2.inOut',
+      }, timeOffset);
+      timeOffset += cam.duration + 0.3;
+    });
+    return;
+  }
+
+  // Cable demo tour (original)
   if (!demoTimeline) demoTimeline = createDemoTour();
   demoTimeline.restart();
 }
@@ -1066,6 +1145,20 @@ function stopDemoTour() {
 let isExploded = false;
 
 function toggleExplode() {
+  // F-16 explode mode
+  if (activeModel === 'f16' && f16Group) {
+    isF16Exploded = !isF16Exploded;
+    f16Explode(f16Group, isF16Exploded);
+    btnExplode.classList.toggle('active', isF16Exploded);
+    if (isF16Exploded) {
+      addNotification('PARÇA GÖRÜNÜMÜ: AÇIK — Kanopi + Motor + Füzeler');
+    } else {
+      addNotification('PARÇA GÖRÜNÜMÜ: KAPALI');
+    }
+    return;
+  }
+
+  // Cable explode mode (original)
   isExploded = !isExploded;
 
   const targetAmt = isExploded ? 1 : 0;
@@ -1095,8 +1188,14 @@ function toggleExplode() {
 }
 
 function resetView() {
-  isExploded = true;
-  toggleExplode();
+  // Reset F-16 explode if active
+  if (activeModel === 'f16' && isF16Exploded) {
+    isF16Exploded = true;
+    toggleExplode();
+  } else if (activeModel === 'cable' && isExploded) {
+    isExploded = true;
+    toggleExplode();
+  }
   stopDemoTour();
   gsap.to(camera.position, {
     x: 0, y: 2.5, z: 10,
@@ -1115,8 +1214,77 @@ function resetView() {
 }
 
 // ============================================================
+// MODEL SWITCHING
+// ============================================================
+function updateHUDForModel(model) {
+  if (model === 'cable') {
+    hudProductValue.textContent = 'Askeri Fiber Optik Kablo Sistemi';
+    hudProductSubtitle.textContent = 'MIL-SPEC TACTICAL COMMUNICATION';
+    hudSpecsContainer.innerHTML = `
+      <div class="spec-item"><div class="spec-label">Tip</div><div class="spec-value">Çok Çekirdekli Taktik Fiber</div></div>
+      <div class="spec-item"><div class="spec-label">Koruma</div><div class="spec-value">Kevlar + Poliüretan Kılıf</div></div>
+      <div class="spec-item"><div class="spec-label">Konnektör</div><div class="spec-value">MIL-DTL-83526</div></div>
+      <div class="spec-item"><div class="spec-label">Standard</div><div class="spec-value">ITU-T G.652.D</div></div>`;
+    panelLeftHeader.innerHTML = '<span class="panel-diamond">◆</span><span>SİSTEM VERİLERİ</span><span class="panel-line"></span>';
+    panelRightHeader.innerHTML = '<span class="panel-diamond">◆</span><span>DİYAGNOSTİK</span><span class="panel-line"></span>';
+  } else {
+    hudProductValue.textContent = 'F-16C Fighting Falcon';
+    hudProductSubtitle.textContent = 'MULTIROLE FIGHTER • BLOCK 50+';
+    hudSpecsContainer.innerHTML = `
+      <div class="spec-item"><div class="spec-label">Motor</div><div class="spec-value">F110-GE-129 Turbofan</div></div>
+      <div class="spec-item"><div class="spec-label">Silah</div><div class="spec-value">9 Hardpoint • 7,700 kg</div></div>
+      <div class="spec-item"><div class="spec-label">Radar</div><div class="spec-value">AN/APG-68(V)9</div></div>
+      <div class="spec-item"><div class="spec-label">Hız</div><div class="spec-value">Mach 2.0+</div></div>`;
+    panelLeftHeader.innerHTML = '<span class="panel-diamond">◆</span><span>UÇUŞ VERİLERİ</span><span class="panel-line"></span>';
+    panelRightHeader.innerHTML = '<span class="panel-diamond">◆</span><span>SİLAH SİSTEMLERİ</span><span class="panel-line"></span>';
+  }
+}
+
+function switchModel(target) {
+  if (activeModel === target) return;
+  activeModel = target;
+
+  // Reset any active animations/explode states
+  if (isExploded) toggleExplode();
+  if (isDemoPlaying) stopDemoTour();
+
+  if (target === 'cable') {
+    cableGroup.visible = true;
+    if (f16Group) f16Group.visible = false;
+    btnModelCable.classList.add('active');
+    btnModelF16.classList.remove('active');
+    updateHUDForModel('cable');
+    const leftPanelFooter = document.querySelector('#panel-left .panel-footer');
+    const rightPanelFooter = document.querySelector('#panel-right .panel-footer');
+    if (leftPanelFooter) leftPanelFooter.innerHTML = '<span class="panel-dot"></span> AKTİF';
+    if (rightPanelFooter) rightPanelFooter.innerHTML = '<span class="panel-dot pulse"></span> CANLI';
+    addNotification('FİBER OPTİK KABLO SEÇİLDİ');
+  } else {
+    cableGroup.visible = false;
+    if (!f16Group) {
+      f16Group = createF16(scene);
+      console.log('✈ F-16 Fighting Falcon yüklendi');
+      console.log('   Hotspotlar:', f16Group.userData.hotspotData.length, 'nokta');
+      console.log('   Etiketler:', f16Group.userData.partLabels.length, 'adet');
+    }
+    f16Group.visible = true;
+    btnModelCable.classList.remove('active');
+    btnModelF16.classList.add('active');
+    updateHUDForModel('f16');
+    const leftPanelFooter = document.querySelector('#panel-left .panel-footer');
+    const rightPanelFooter = document.querySelector('#panel-right .panel-footer');
+    if (leftPanelFooter) leftPanelFooter.innerHTML = '<span class="panel-dot"></span> HAZIR';
+    if (rightPanelFooter) rightPanelFooter.innerHTML = '<span class="panel-dot pulse"></span> SİLAHLI';
+    addNotification('F-16 FIGHTING FALCON SEÇİLDİ');
+  }
+}
+
+// ============================================================
 // BUTTON EVENTS
 // ============================================================
+btnModelCable?.addEventListener('click', () => switchModel('cable'));
+btnModelF16?.addEventListener('click', () => switchModel('f16'));
+
 btnDemo.addEventListener('click', () => {
   if (isDemoPlaying) {
     stopDemoTour();
@@ -1363,6 +1531,12 @@ function animate() {
 
   // --- Hologram panel animations ---
   const time = Date.now() * 0.001;
+
+  // --- F-16 update ---
+  if (f16Group && f16Group.visible) {
+    updateF16(f16Group, time, camera, isF16Exploded);
+  }
+
   hologramPanels.forEach((group, i) => {
     // Billboard: face the camera (skip anchor lines)
     group.children.forEach(child => {
